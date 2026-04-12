@@ -1,0 +1,20 @@
+[project]
+name = "lily-agent"
+version = "0.1.0"
+description = "A lightweight python framework for building modular LLM-powered AI agents."
+authors = [{ name = "ShreeSPSV" }]
+readme = "readme.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic",
+    "httpx"
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+license = { text = "MIT" }

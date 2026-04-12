@@ -1,6 +1,6 @@
-from ..tool.tool_base import Tool
+from ..tools.tool_base import Tool
 from typing import List
-from ..tool.tool_exceptions import ToolValidationError, ToolRuntimeError
+from ..tools.tool_exceptions import ToolValidationError, ToolRuntimeError
 from .agent_exceptions import ToolNotFoundError
 from ..adapters.adapter_classes import Message, ToolCall
 

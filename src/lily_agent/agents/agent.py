@@ -1,12 +1,12 @@
 from ..adapters.adapter import AgentAdapter
-from ..tool.tool_base import Tool
+from ..tools.tool_base import Tool
 from ..formatters.base_formatter import BaseFormatter
 from ..formatters.formatter import Formatter
 from ..adapters.adapter_classes import Message
 from .agent_exceptions import MaxIterationsError
 from .tool_executor import ToolExecutor
 from ..memory.conversations import Conversation
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Any
 
 
 class LilyAgent:
