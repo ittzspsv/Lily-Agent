@@ -1,7 +1,7 @@
-<h1 align="center">
-  <img src=".github/images/Chiaki.png" width="80" style="vertical-align: middle; margin-right: 20px;" />
-  Lily Agent
-</h1>
+<div align="center" style="display: flex; align-items: center; justify-content: center; gap: 16px;">
+  <img src=".github/images/Chiaki.png" width="80" />
+  <h1 style="margin: 0;">Lily Agent</h1>
+</div>
 
 
 
