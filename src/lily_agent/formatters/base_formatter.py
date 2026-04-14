@@ -1,5 +1,5 @@
 from .formatter import Formatter
-from ..tools.tool_base import Tool
+from ..tools.base.tool_base import Tool
 from typing import Dict, Any
 
 
@@ -10,7 +10,6 @@ class BaseFormatter(Formatter):
 
     def format(self, tool: Tool) -> Dict[str, Any]:
         schema = tool.input_schema.copy()
-
         if self.strict:
             schema.setdefault("additionalProperties", False)
 

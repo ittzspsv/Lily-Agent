@@ -1,10 +1,11 @@
 import inspect
 from pydantic import BaseModel, create_model, ValidationError
 from typing import Optional, Type, Callable, Dict, Any, Tuple ,get_type_hints, cast
-from .tool_exceptions import ToolRuntimeError, ToolValidationError
+from ..base.tool_exceptions import ToolRuntimeError, ToolValidationError
+from ..base.tool_base import Tool
 
 
-class Tool():
+class FunctionTool(Tool):
     """
     Base Class for defining a tool.
     - This Class wraps a callable function and converts that into a structured tool with JSON Schema
@@ -17,6 +18,8 @@ class Tool():
     """
     def __init__(self, func: Callable , name: Optional[str] ,description: Optional[str], parameters: Optional[Type[BaseModel]]) -> None:
         
+        if func is None:
+            raise ToolRuntimeError("No function has been passed onto the tool!")
         self.func: Callable = func
 
         if description is not None:
@@ -72,16 +75,18 @@ class Tool():
 
         return schema
 
-    def __call__(self, **kwargs):
+    def execute(self, **kwargs):
         try:
-            validate = self.parameters(**kwargs)
+            if self.parameters is not None:
+                validated = self.parameters(**kwargs)
+                kwargs = validated.model_dump()
+
+            return self.func(**kwargs)
+
         except ValidationError as e:
             raise ToolValidationError(self.name, e.errors())
-        
-        try:
-            data = validate.model_dump()
-            return self.func(**data)
-        except (ValueError, TypeError, RuntimeError) as e:
+
+        except Exception as e:
             raise ToolRuntimeError(self.name, str(e))
     
     def __repr__(self) -> str:
@@ -92,5 +97,7 @@ class Tool():
 
     @property
     def input_schema(self) -> Dict[str, Any]:
+        if self.parameters is None:
+            return {}
         return self._schema_process(self.parameters.model_json_schema())
         

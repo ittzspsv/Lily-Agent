@@ -33,7 +33,7 @@ class AgentAdapter(ABC):
         self.config = kwargs
 
     @abstractmethod
-    def complete(self, messages: List[Message], tools: List[dict]) -> LLMResponse:
+    def complete(self, messages: List[Message], tools: List[dict], think: bool=False) -> LLMResponse:
         '''
         ### Definition
         - Main entry point for generating an response from the LLM.
@@ -51,7 +51,7 @@ class AgentAdapter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _build_request(self, messages: List[Message], tools: List[dict]) -> dict:
+    def _build_request(self, messages: List[Message], tools: List[dict], think: bool) -> dict:
         '''
         ### Definition
         - Builds dynamic requests payload for the LLM to understand. 

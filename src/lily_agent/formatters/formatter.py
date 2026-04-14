@@ -1,4 +1,4 @@
-from ..tools.tool_base import Tool
+from ..tools.base.tool_base import Tool
 from typing import Dict, Any
 from abc import ABC, abstractmethod
 

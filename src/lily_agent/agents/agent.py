@@ -1,5 +1,5 @@
 from ..adapters.adapter import AgentAdapter
-from ..tools.tool_base import Tool
+from ..tools.base.tool_base import Tool
 from ..formatters.base_formatter import BaseFormatter
 from ..formatters.formatter import Formatter
 from ..adapters.adapter_classes import Message
@@ -11,6 +11,7 @@ from typing import List, Optional, Any
 
 class LilyAgent:
     """
+    ### Definition
     - Base class for all Agents that is responsible for handling prompts and
     flow of interaction with a `LLM` (Large Language Model) Adapter.
     - It maintains conversational state, manages available **Tools** and **__Formatters__**,

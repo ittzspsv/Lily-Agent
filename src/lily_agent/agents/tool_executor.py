@@ -1,11 +1,11 @@
-from ..tools.tool_base import Tool
+from ..tools.core.function_tool import FunctionTool
 from typing import List
-from ..tools.tool_exceptions import ToolValidationError, ToolRuntimeError
+from ..tools.base.tool_exceptions import ToolValidationError, ToolRuntimeError
 from .agent_exceptions import ToolNotFoundError
 from ..adapters.adapter_classes import Message, ToolCall
 
 class ToolExecutor:
-    def __init__(self, tools: List[Tool]) -> None:
+    def __init__(self, tools: List[FunctionTool]) -> None:
         self._tool_registry = {tool.name: tool for tool in tools}
 
     def execute(self, tool_calls: List[ToolCall] | None) -> List[Message]:
@@ -20,7 +20,7 @@ class ToolExecutor:
             
             tool = self._tool_registry[tool_call.name]
             try:
-                result = tool(**tool_call.input)
+                result = tool.execute(**tool_call.input)
             except ToolValidationError as e:
                 result = f"Validation error: {e}"  
             except ToolRuntimeError as e:

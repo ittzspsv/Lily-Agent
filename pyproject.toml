@@ -9,6 +9,7 @@ dependencies = [
     "pydantic",
     "httpx"
 ]
+license = { text = "MIT" }
 
 [build-system]
 requires = ["setuptools"]
@@ -16,5 +17,3 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-license = { text = "MIT" }

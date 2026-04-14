@@ -11,7 +11,7 @@ class OllamaAdapter(AgentAdapter):
     def __init__(self, model: str, base_endpoint: str | None = "http://localhost:11434", api_key: str | None = None, **kwargs) -> None:
         super().__init__(model, base_endpoint, api_key, **kwargs)
 
-    def complete(self, messages: List[Message], tools: List[dict]) -> LLMResponse:
+    def complete(self, messages: List[Message], tools: List[dict], think: bool = False) -> LLMResponse:
         '''
         ### Definition
         - Responsible for sending messages to the model and returning a structure concluded LLM Response
@@ -28,7 +28,7 @@ class OllamaAdapter(AgentAdapter):
           - If any error was raised during the execution process.
         '''
         try:
-            request: dict = self._build_request(messages=messages, tools=tools)
+            request: dict = self._build_request(messages=messages, tools=tools, think=think)
             response: dict = self._call(request=request)
             return self._parse_response(response=response)
         except AdapterError:
@@ -36,7 +36,7 @@ class OllamaAdapter(AgentAdapter):
         except Exception as e:
             raise AdapterError(f"Unexpected error occured: {e}") from e
 
-    def _build_request(self, messages: List[Message], tools: List[dict]) -> dict:
+    def _build_request(self, messages: List[Message], tools: List[dict], think: bool) -> dict:
         '''
         ### Definition
         - Builds dynamic requests payload for the LLM to understand. 
@@ -75,7 +75,8 @@ class OllamaAdapter(AgentAdapter):
             "model": self.model,
             "messages": messages_list,
             "tools": tools,
-            "stream": False
+            "stream": False,
+            "think": think
         }
     
 
