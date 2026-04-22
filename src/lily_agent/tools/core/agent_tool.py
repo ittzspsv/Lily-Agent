@@ -20,8 +20,12 @@ class AgentTool(Tool):
 
     def execute(self, **kwargs) -> str:
         input_ = kwargs["input"]
-        result = self.agent.run(str(input_))
-        return result
+        return self.agent.run(str(input_))
+    
+    
+    async def aexecute(self, **kwargs) -> str:
+        input_ = kwargs["input"]
+        return await self.agent.arun(str(input_))
     
     @property
     def input_schema(self) -> Dict[str, Any]:

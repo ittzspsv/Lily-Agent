@@ -21,6 +21,7 @@ class FunctionTool(Tool):
         if func is None:
             raise ToolRuntimeError("No function has been passed onto the tool!")
         self.func: Callable = func
+        self._async = inspect.iscoroutinefunction(func)
 
         if description is not None:
             self.description = description
@@ -76,6 +77,26 @@ class FunctionTool(Tool):
         return schema
 
     def execute(self, **kwargs):
+        '''
+        ### Definition
+        - Used to execute the function defined in this tool in a synchronous manner.
+        - It validates incomming arguments using pydantic's validation
+        ### Arguments
+        - ****kwargs**: dict
+          - Keyword arguments that should be passed to the tool's function
+          - These keywords are validated with pydantic schema before execution.
+        ### Raises
+        - **ToolValidationError**
+          - If argument validation fails
+        - **ToolRuntimeError**
+          - If any runtime errors are throwed during the execution.
+        '''
+        if self._async:
+            raise ToolRuntimeError(
+                self.name,
+                "Cannot call async tool in sync context. consider using 'aexecute' instead"
+            )
+        
         try:
             if self.parameters is not None:
                 validated = self.parameters(**kwargs)
@@ -88,6 +109,38 @@ class FunctionTool(Tool):
 
         except Exception as e:
             raise ToolRuntimeError(self.name, str(e))
+        
+    async def aexecute(self, **kwargs):
+        '''
+        ### Definition
+        - Used to execute the function defined in this tool in a asynchronous manner.
+        - It validates incomming arguments using pydantic's validation
+        ### Arguments
+        - ****kwargs**: dict
+          - Keyword arguments that should be passed to the tool's function
+          - These keywords are validated with pydantic schema before execution.
+        ### Raises
+        - **ToolValidationError**
+          - If argument validation fails
+        - **ToolRuntimeError**
+          - If any runtime errors are throwed during the execution.
+        '''
+        try:
+            if self.parameters is not None:
+                    validated = self.parameters(**kwargs)
+                    kwargs = validated.model_dump()
+
+            if self._async:
+                return await self.func(**kwargs)
+            else:
+                return self.func(**kwargs)
+
+        except ValidationError as e:
+            raise ToolValidationError(self.name, e.errors())
+
+        except Exception as e:
+            raise ToolRuntimeError(self.name, str(e))
+
     
     def __repr__(self) -> str:
         return f'Tool(name="{self.name}", params={list(self.parameters.model_fields.keys())})'

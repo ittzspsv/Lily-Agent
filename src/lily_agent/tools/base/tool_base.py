@@ -20,6 +20,9 @@ class Tool(ABC):
     def execute(self, **kwargs) -> Any:
         raise NotImplementedError
 
+    async def aexecute(self, **kwargs) -> Any:
+        return self.execute(**kwargs)
+
     @property
     def input_schema(self) -> Dict[str, Any]:
         return {} 
