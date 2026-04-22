@@ -1,3 +1,5 @@
+# function_tool.py
+
 import inspect
 from pydantic import BaseModel, create_model, ValidationError
 from typing import Optional, Type, Callable, Dict, Any, Tuple ,get_type_hints, cast
@@ -75,8 +77,16 @@ class FunctionTool(Tool):
             properities.pop("title", None)
 
         return schema
+    
+    def _validate(self, **kwargs) -> dict:
+        if self.parameters is not None:
+            try:
+                return self.parameters(**kwargs).model_dump()
+            except ValidationError as e:
+                raise ToolValidationError(self.name, e.errors())
+        return kwargs
 
-    def execute(self, **kwargs):
+    def execute_sync(self, **kwargs):
         '''
         ### Definition
         - Used to execute the function defined in this tool in a synchronous manner.
@@ -98,22 +108,22 @@ class FunctionTool(Tool):
             )
         
         try:
-            if self.parameters is not None:
-                validated = self.parameters(**kwargs)
-                kwargs = validated.model_dump()
-
+            kwargs = self._validate(**kwargs)
             return self.func(**kwargs)
 
-        except ValidationError as e:
-            raise ToolValidationError(self.name, e.errors())
+        except ToolValidationError:
+            raise
+
+        except ToolRuntimeError:
+            raise
 
         except Exception as e:
             raise ToolRuntimeError(self.name, str(e))
         
-    async def aexecute(self, **kwargs):
+    async def execute(self, **kwargs):
         '''
         ### Definition
-        - Used to execute the function defined in this tool in a asynchronous manner.
+        - Used to execute not the function defined in this tool in a asynchronous manner.
         - It validates incomming arguments using pydantic's validation
         ### Arguments
         - ****kwargs**: dict
@@ -126,17 +136,18 @@ class FunctionTool(Tool):
           - If any runtime errors are throwed during the execution.
         '''
         try:
-            if self.parameters is not None:
-                    validated = self.parameters(**kwargs)
-                    kwargs = validated.model_dump()
+            kwargs = self._validate(**kwargs)
 
             if self._async:
                 return await self.func(**kwargs)
             else:
                 return self.func(**kwargs)
+            
+        except ToolValidationError:
+            raise
 
-        except ValidationError as e:
-            raise ToolValidationError(self.name, e.errors())
+        except ToolRuntimeError:
+            raise
 
         except Exception as e:
             raise ToolRuntimeError(self.name, str(e))

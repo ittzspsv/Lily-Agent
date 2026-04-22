@@ -1,3 +1,5 @@
+# ollama_adapter.py
+
 from ..adapter import AgentAdapter
 from typing import List, Any, Dict, Optional
 from ..adapter_classes import LLMResponse, Message, ToolCall
@@ -58,7 +60,7 @@ class OllamaAdapter(AgentAdapter):
             "think": think
         }
     
-    def _call(self, request: dict) -> Any:
+    def _call_sync(self, request: dict) -> Any:
         '''
         ### Definition
         - Sends a synchronous `POST` request to the OLLAMA API'S Endpoint and returns the json response
@@ -90,7 +92,7 @@ class OllamaAdapter(AgentAdapter):
             else:
                 raise AdapterError(f"HTTP error {response_status}: {e.response.text}") from e
             
-    async def _acall(self, request: dict) -> Any:
+    async def _call(self, request: dict) -> Any:
         '''
         ### Definition
         - Sends an asynchronous `POST` request to the OLLAMA API'S Endpoint and returns the json response
@@ -169,3 +171,6 @@ class OllamaAdapter(AgentAdapter):
             return LLMResponse(response_type="tool_call", content=content, tool_calls=tool_calls, raw=response)
         else:
             return LLMResponse(response_type="text", content=content, tool_calls=None, raw=response)
+        
+    async def close(self):
+        await self._network_client.aclose()

@@ -1,3 +1,5 @@
+# tool_base.py
+
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
@@ -17,11 +19,13 @@ class Tool(ABC):
         self.description = description
 
     @abstractmethod
-    def execute(self, **kwargs) -> Any:
+    async def execute(self, **kwargs) -> Any:
         raise NotImplementedError
 
-    async def aexecute(self, **kwargs) -> Any:
-        return self.execute(**kwargs)
+    @abstractmethod
+    def execute_sync(self, **kwargs) -> Any:
+        raise NotImplementedError
+
 
     @property
     def input_schema(self) -> Dict[str, Any]:

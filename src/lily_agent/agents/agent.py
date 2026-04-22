@@ -1,3 +1,5 @@
+# agent.py
+
 from ..adapters.adapter import AgentAdapter
 from ..tools.base.tool_base import Tool
 from ..formatters.base_formatter import BaseFormatter
@@ -43,7 +45,7 @@ class LilyAgent:
         self.conversation: Conversation =  Conversation(self.system_prompt)
 
 
-    def run(self, query: str) -> str:
+    def run_sync(self, query: str) -> str:
         '''
         ### Definition
         - Method used to run user query by interacting with the LLM and making tool-calls whenever necessary
@@ -66,7 +68,7 @@ class LilyAgent:
         formatted_tools = self.formatter.format_many(self.tools) if self.tools else []
  
         for _ in range(self.max_iter):
-            response = self.adapter.complete(self.conversation.get_messages(), formatted_tools)
+            response = self.adapter.complete_sync(self.conversation.get_messages(), formatted_tools)
             if response.response_type == "text":
                 if response.content is not None:
                     self.conversation.add_assistant(content=response.content)
@@ -76,14 +78,14 @@ class LilyAgent:
                     raise RuntimeError("Tool call was requested even though Agent has no tools defined.")
                 if response.raw and response.raw.get("message"):
                     self.conversation.add_assistant(content=response.raw.get("message"))
-                tool_results = self.tool_executor.execute(response.tool_calls)
+                tool_results = self.tool_executor.execute_sync(response.tool_calls)
                 self.conversation.add_tool_results(tool_results)
                 continue
 
             
         raise MaxIterationsError(self.max_iter)
 
-    async def arun(self, query: str) -> str:
+    async def run(self, query: str) -> str:
         '''
         ### Definition
         - Asynchronous method used to run user query by interacting with the LLM and making tool-calls whenever necessary
@@ -105,7 +107,7 @@ class LilyAgent:
         formatted_tools = self.formatter.format_many(self.tools) if self.tools else []
 
         for _ in range(self.max_iter):
-            response = await self.adapter.acomplete(
+            response = await self.adapter.complete(
             self.conversation.get_messages(),
             formatted_tools
         )
@@ -119,7 +121,7 @@ class LilyAgent:
                     raise RuntimeError("Tool call was requested even though Agent has no tools defined.")
                 if response.raw and response.raw.get("message"):
                     self.conversation.add_assistant(content=response.raw.get("message"))
-                tool_results = await self.tool_executor.aexecute(response.tool_calls)
+                tool_results = await self.tool_executor.execute(response.tool_calls)
                 self.conversation.add_tool_results(tool_results)
                 continue
 

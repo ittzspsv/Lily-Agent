@@ -1,3 +1,5 @@
+# adapter.py
+
 from abc import ABC, abstractmethod
 from typing import Optional
 from typing import List, Any
@@ -32,7 +34,7 @@ class AgentAdapter(ABC):
         self.api_key = api_key
         self.config = kwargs
 
-    def complete(self, messages: List[Message], tools: List[dict], think: bool=False) -> LLMResponse:
+    def complete_sync(self, messages: List[Message], tools: List[dict], think: bool=False) -> LLMResponse:
         '''
         ### Definition
         - Main entry point for generating an response from the LLM.
@@ -50,7 +52,7 @@ class AgentAdapter(ABC):
         '''
         try:
             request = self._build_request(messages, tools, think)
-            response = self._call(request)
+            response = self._call_sync(request)
             return self._parse_response(response)
 
         except AdapterError:
@@ -59,7 +61,7 @@ class AgentAdapter(ABC):
         except Exception as e:
             raise AdapterError(f"Unexpected error occurred: {e}") from e
         
-    async def acomplete(self, messages: List[Message], tools: List[dict], think: bool = False) -> LLMResponse:
+    async def complete(self, messages: List[Message], tools: List[dict], think: bool = False) -> LLMResponse:
       '''
         ### Definition
         - Main asynchronous entry point for generating an response from the LLM.
@@ -77,7 +79,7 @@ class AgentAdapter(ABC):
         '''
       try:
           request = self._build_request(messages, tools, think)
-          response = await self._acall(request)
+          response = await self._call(request)
           return self._parse_response(response)
 
       except AdapterError:
@@ -101,7 +103,7 @@ class AgentAdapter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _call(self, request: dict) -> Any:
+    def _call_sync(self, request: dict) -> Any:
         '''
         ### Definition
         - Method used to send an POST request to the API's Endpoint and returns the json response
@@ -115,7 +117,7 @@ class AgentAdapter(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def _acall(self, request: dict) -> Any:
+    async def _call(self, request: dict) -> Any:
         '''
         ### Definition
         - Method used to send an asynchronous POST request to the API's Endpoint and returns the json response
