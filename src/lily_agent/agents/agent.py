@@ -1,10 +1,10 @@
 # agent.py
 
-from ..adapters.adapter import AgentAdapter
+from ..adapters.core.adapter import AgentAdapter
 from ..tools.base.tool_base import Tool
 from ..formatters.base_formatter import BaseFormatter
 from ..formatters.formatter import Formatter
-from ..adapters.adapter_classes import Message
+from ..adapters.core.adapter_classes import Message
 from .agent_exceptions import MaxIterationsError
 from .tool_executor import ToolExecutor
 from ..memory.conversations import Conversation

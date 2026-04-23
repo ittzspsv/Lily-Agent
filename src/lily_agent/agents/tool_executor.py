@@ -5,7 +5,7 @@ from ..tools.base.tool_base import Tool
 from typing import List
 from ..tools.base.tool_exceptions import ToolValidationError, ToolRuntimeError
 from .agent_exceptions import ToolNotFoundError
-from ..adapters.adapter_classes import Message, ToolCall
+from ..adapters.core.adapter_classes import Message, ToolCall
 
 class ToolExecutor:
     def __init__(self, tools: List[Tool]) -> None:

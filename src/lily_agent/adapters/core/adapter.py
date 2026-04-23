@@ -6,6 +6,9 @@ from typing import List, Any
 from .adapter_exceptions import AdapterError
 from .adapter_classes import LLMResponse, Message
 
+import asyncio
+import httpx
+
 class AgentAdapter(ABC):
     '''
     ### Definition
@@ -28,11 +31,29 @@ class AgentAdapter(ABC):
     - ****kwargs****
       - Additional configurations
     '''
-    def __init__(self, model: str, base_endpoint: Optional[str]=None, api_key: Optional[str]=None, **kwargs) -> None:
+    def __init__(
+            self, 
+            model: str, 
+            base_endpoint: Optional[str]=None, 
+            path: Optional[str]=None,
+            api_key: Optional[str]=None,
+            timeout: float = 300.0,
+            **kwargs
+      ) -> None:
+        
         self.model = model
-        self.base_endpoint = base_endpoint
+        self.base_endpoint = base_endpoint or ""
+        self.path = path or ""
         self.api_key = api_key
         self.config = kwargs
+        self.timeout = timeout
+        self._headers: dict = {"Content-Type": "application/json"}
+
+        if self.api_key:
+            self._headers["Authorization"] =  f"Bearer {self.api_key}"
+
+        self._network_client = httpx.AsyncClient(timeout=timeout)
+
 
     def complete_sync(self, messages: List[Message], tools: List[dict], think: bool=False) -> LLMResponse:
         '''
@@ -102,7 +123,6 @@ class AgentAdapter(ABC):
         '''
         raise NotImplementedError
 
-    @abstractmethod
     def _call_sync(self, request: dict) -> Any:
         '''
         ### Definition
@@ -114,9 +134,14 @@ class AgentAdapter(ABC):
         ### Raises
         - Handling all sorts of errors raised during the exception.
         '''
-        raise NotImplementedError
-    
-    @abstractmethod
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self._call(request))
+        else:
+            raise RuntimeError("Cannot call synchronous method inside an running loop.  Consider using `_call` instead")
+
+
     async def _call(self, request: dict) -> Any:
         '''
         ### Definition
@@ -128,7 +153,32 @@ class AgentAdapter(ABC):
         ### Raises
         - Handling all sorts of errors raised during the exception.
         '''
-        raise NotImplementedError
+        try:
+          response = await self._network_client.post(
+              self.endpoint,
+              json=request,
+              headers=self._headers
+          )
+          response.raise_for_status()
+          return response.json()
+        
+        except httpx.ConnectError as e:
+            raise AdapterError(f"Could not connect to {self.base_endpoint}.") from e
+        
+        except httpx.TimeoutException as e:
+          raise AdapterError("Request timed out") from e
+        
+        except httpx.HTTPStatusError as e:
+            response_status: int = e.response.status_code
+
+            if response_status == 404:
+                raise AdapterError(f"The response returned {e.response.status_code}") from e
+            elif response_status == 401:
+                raise AdapterError("Unauthorized (401)") from e
+            elif response_status == 403:
+                raise AdapterError("Forbidden (403)") from e
+            else:
+                raise AdapterError(f"HTTP error {response_status}: {e.response.text}") from e
 
     @abstractmethod
     def _parse_response(self, response: Any) -> LLMResponse:
@@ -152,3 +202,10 @@ class AgentAdapter(ABC):
           - Unprocessed response from the LLM
         '''
         raise NotImplementedError
+
+    async def close(self):
+        await self._network_client.aclose()
+    
+    @property
+    def endpoint(self):
+        return f"{self.base_endpoint.rstrip('/')}/{self.path.lstrip('/')}"

@@ -1,4 +1,4 @@
-from ..adapters.adapter_classes import Message
+from ..adapters.core.adapter_classes import Message
 from typing import List
 
 class Conversation:
