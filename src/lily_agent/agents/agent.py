@@ -8,7 +8,11 @@ from ..adapters.core.adapter_classes import Message
 from .agent_exceptions import MaxIterationsError
 from .tool_executor import ToolExecutor
 from ..memory.conversations import Conversation
-from typing import List, Optional, Any
+from ..memory.core.memory import AgentMemory
+from ..policy.agent_policy import AgentPolicy
+from typing import Optional, List
+
+import asyncio
 
 
 class LilyAgent:
@@ -27,12 +31,25 @@ class LilyAgent:
     - **messages**: `List[Message]` => Conversational history
     """
 
-    def __init__(self, adapter: AgentAdapter, tools: Optional[List[Tool]]=None, formatter: Optional[Formatter] = None, role: Optional[str] = None ,prompt: Optional[str] = None, max_iter: int = 3) -> None:
+    def __init__(
+            self, 
+            adapter: AgentAdapter, 
+            memory: Optional[AgentMemory] = None,
+            tools: Optional[List[Tool]]=None, 
+            formatter: Optional[Formatter] = None, 
+            role: Optional[str] = None ,
+            prompt: Optional[str] = None, 
+            max_iter: int = 3,
+            policy: Optional[AgentPolicy] = None,
+    ) -> None:
+        
         self.tools: List[Tool] = tools or []
 
         '''Default fallback role'''
+
         self.role = role if role is not None else "You are Lily, a helpful agent developed by Shree"
         '''Default fallback prompt'''
+
         self.prompt = prompt if prompt is not None else "Answer to user prompts and use tools whenever necessary."
         self.system_prompt: str = f"{self.role}\n\n{self.prompt}"
         self.max_iter: int = max_iter
@@ -44,8 +61,23 @@ class LilyAgent:
 
         self.conversation: Conversation =  Conversation(self.system_prompt)
 
+        self.memory: Optional[AgentMemory] = memory
 
-    def run_sync(self, query: str) -> str:
+        self.policy: Optional[AgentPolicy] = policy
+
+        '''Private variables'''
+        self._use_conversational_history: bool = True
+        
+        self._use_memory: bool = False
+
+        if self.memory is not None:
+            self._use_memory = True
+
+        if self.policy is not None:
+            self._apply_policy()
+
+
+    def run_sync(self, query: str):
         '''
         ### Definition
         - Method used to run user query by interacting with the LLM and making tool-calls whenever necessary
@@ -63,27 +95,29 @@ class LilyAgent:
         ### Raises
         - **MaxIterationsError** => raises when the maximum number of iterations is reached without providing an concluding response
         '''
-        
-        self.conversation.add_user(content=query)
-        formatted_tools = self.formatter.format_many(self.tools) if self.tools else []
- 
-        for _ in range(self.max_iter):
-            response = self.adapter.complete_sync(self.conversation.get_messages(), formatted_tools)
-            if response.response_type == "text":
-                if response.content is not None:
-                    self.conversation.add_assistant(content=response.content)
-                    return response.content
-            elif response.response_type == "tool_call":
-                if not self.tool_executor:
-                    raise RuntimeError("Tool call was requested even though Agent has no tools defined.")
-                if response.raw and response.raw.get("message"):
-                    self.conversation.add_assistant(content=response.raw.get("message"))
-                tool_results = self.tool_executor.execute_sync(response.tool_calls)
-                self.conversation.add_tool_results(tool_results)
-                continue
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self.run(query=query))
+        else:
+            raise RuntimeError(
+                "Cannot call run_sync() inside a running event loop. "
+                "Use 'await agent.run()' instead."
+            )
 
+    def _apply_policy(self) -> None:
+        if self.policy is not None:
+            if self.policy.use_memory is not None:
+                self._use_memory = self.policy.use_memory
             
-        raise MaxIterationsError(self.max_iter)
+            if self.policy.use_conversational_history is not None:
+                self._use_conversational_history = self.policy.use_conversational_history
+
+            if self.policy.use_tools is not None and not self.policy.use_tools:
+                self.tools = []
+                self._tool_registry = {}
+                self.tool_executor = None
+        
 
     async def run(self, query: str) -> str:
         '''
@@ -103,26 +137,67 @@ class LilyAgent:
         ### Raises
         - **MaxIterationsError** => raises when the maximum number of iterations is reached without providing an concluding response
         '''
-        self.conversation.add_user(content=query)
+        
         formatted_tools = self.formatter.format_many(self.tools) if self.tools else []
+
+        if self._use_conversational_history:
+            conversation = self.conversation
+        else:
+            conversation = Conversation(self.system_prompt)
+
+        conversation.add_user(content=query)
+
+        '''Memory Retrieval'''
+        if self._use_memory and self.memory is not None:
+            memory_retrieval = await self.memory.retrieve(
+                query=query,
+                k=5
+            )
+
+            '''Only retrieve memory if persistent memory module exists'''
+            for item in memory_retrieval:
+                conversation.add_system(
+                    content=f"[Memory] {item}"
+                )
 
         for _ in range(self.max_iter):
             response = await self.adapter.complete(
-            self.conversation.get_messages(),
+            conversation.get_messages(),
             formatted_tools
         )
-            
+                
             if response.response_type == "text":
                 if response.content is not None:
-                    self.conversation.add_assistant(content=response.content)
+
+                    conversation.add_assistant(content=response.content)
+
+                    '''Store to persistent memory if we have an persistent memory defined'''
+                    if self._use_memory and self.memory is not None:
+                        await self.memory.push(
+                            text=response.content,
+                            role="assistant",
+                            metadata = {"type": "response"}
+                        )
+
                     return response.content
+                
             elif response.response_type == "tool_call":
                 if not self.tool_executor:
                     raise RuntimeError("Tool call was requested even though Agent has no tools defined.")
+                
                 if response.raw and response.raw.get("message"):
-                    self.conversation.add_assistant(content=response.raw.get("message"))
+                    conversation.add_assistant(content=response.raw.get("message"))
                 tool_results = await self.tool_executor.execute(response.tool_calls)
-                self.conversation.add_tool_results(tool_results)
+
+                conversation.add_tool_results(tool_results)
+
+                if self._use_memory and self.memory is not None:
+                        await self.memory.push(
+                            text=str(tool_results),
+                            role="assistant",
+                            metadata = {"type": "tool_result"}
+                        )
+                
                 continue
 
         raise MaxIterationsError(self.max_iter)

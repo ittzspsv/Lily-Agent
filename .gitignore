@@ -104,3 +104,6 @@ Thumbs.db
 # SQLite databases
 *.sqlite3
 *.db
+
+# Personal addings
+.linkedin/

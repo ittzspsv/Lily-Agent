@@ -55,13 +55,17 @@ class OllamaAdapter(AgentAdapter):
 
         
 
-        return  {
+        payload =  {
             "model": self.model,
             "messages": messages_list,
-            "tools": tools,
             "stream": False,
             "think": think
         }
+
+        if tools is not None and len(tools) > 0:
+            payload["tools"] = tools
+
+        return payload
 
     def _parse_response(self, response: Any) -> LLMResponse:
         '''
