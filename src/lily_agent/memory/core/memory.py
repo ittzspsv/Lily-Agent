@@ -5,10 +5,7 @@ from ...embedder.core.embedder import Embedder
 import asyncio
 
 
-class AgentMemory(ABC):
-    def __init__(self, embedder: Embedder, *args, **kwargs):
-        self.embedder = embedder
-
+class MemoryBase(ABC):
     def _run_sync(self, coro):
         try:
             asyncio.get_running_loop()
@@ -18,17 +15,7 @@ class AgentMemory(ABC):
             raise RuntimeError(
                 "Cannot call sync method inside a running loop. Use async version."
             )
-        
-    @abstractmethod
-    async def _init(self) -> None:
-        pass
-        
-    @classmethod
-    async def create(cls , embedder: Embedder, uri: str):
-        self = cls(embedder=embedder, uri=uri)
-        await self._init()
-        return self
-
+    
     @abstractmethod
     async def push(
         self,

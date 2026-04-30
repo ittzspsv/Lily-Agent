@@ -5,10 +5,12 @@ from ...formatters.formatter import Formatter
 from ..errors.agent_exceptions import MaxIterationsError
 from ..tool_executor import ToolExecutor
 from ...memory.conversations import Conversation
-from ...memory.core.memory import AgentMemory
+from ...memory.core.memory import MemoryBase
 from ...policy.agent_policy import AgentPolicy
 from ..core.agent_base import AgentBase
 from ..events.agent_events import AgentEvents
+
+import time
 
 from ..events.event_classes import (
     TextResponse,
@@ -38,7 +40,7 @@ class LilyAgent(AgentBase):
     def __init__(
             self, 
             adapter: AgentAdapter, 
-            memory: Optional[AgentMemory] = None,
+            memory: Optional[MemoryBase] = None,
             tools: Optional[List[Tool]]=None, 
             formatter: Optional[Formatter] = None, 
             role: Optional[str] = None ,
@@ -64,7 +66,7 @@ class LilyAgent(AgentBase):
         self.formatter = formatter if formatter is not None else BaseFormatter()
         self.tool_executor: Optional[ToolExecutor] = ToolExecutor(tools=self.tools, event_handler=self._agent_event_handler) if self.tools else None
         self.conversation: Conversation =  Conversation(self.system_prompt)
-        self.memory: Optional[AgentMemory] = memory
+        self.memory: Optional[MemoryBase] = memory
         self.policy: Optional[AgentPolicy] = policy
 
         
@@ -126,8 +128,6 @@ class LilyAgent(AgentBase):
         def decorator(fn):
             event_name = fn.__name__
             self._agent_event_handler.register(event_name, fn)
-
-            print(f"Registered {fn.__name__}")
             return fn
 
         if func is None:
@@ -162,12 +162,16 @@ class LilyAgent(AgentBase):
 
         conversation.add_user(content=query)
 
+        start = time.time()
+
         """ Memory Retrieval """
         if self._use_memory and self.memory is not None:
             memory_retrieval = await self.memory.retrieve(
                 query=query,
                 k=5
             )
+
+            print("MEMORY TIME:", time.time() - start)
 
             if len(memory_retrieval) > 0:
                 '''Only retrieve memory if persistent memory module exists'''
