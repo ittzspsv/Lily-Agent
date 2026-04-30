@@ -1,21 +1,25 @@
-# agent.py
+from ...adapters.core.adapter import AgentAdapter
+from ...tools.base.tool_base import Tool
+from ...formatters.base_formatter import BaseFormatter
+from ...formatters.formatter import Formatter
+from ..errors.agent_exceptions import MaxIterationsError
+from ..tool_executor import ToolExecutor
+from ...memory.conversations import Conversation
+from ...memory.core.memory import AgentMemory
+from ...policy.agent_policy import AgentPolicy
+from ..core.agent_base import AgentBase
+from ..events.agent_events import AgentEvents
 
-from ..adapters.core.adapter import AgentAdapter
-from ..tools.base.tool_base import Tool
-from ..formatters.base_formatter import BaseFormatter
-from ..formatters.formatter import Formatter
-from ..adapters.core.adapter_classes import Message
-from .agent_exceptions import MaxIterationsError
-from .tool_executor import ToolExecutor
-from ..memory.conversations import Conversation
-from ..memory.core.memory import AgentMemory
-from ..policy.agent_policy import AgentPolicy
+from ..events.event_classes import (
+    TextResponse,
+    MemoryRetrieval
+)
+
 from typing import Optional, List
-
 import asyncio
 
 
-class LilyAgent:
+class LilyAgent(AgentBase):
     """
     ### Definition
     - Base class for all Agents that is responsible for handling prompts and
@@ -43,39 +47,36 @@ class LilyAgent:
             policy: Optional[AgentPolicy] = None,
     ) -> None:
         
-        self.tools: List[Tool] = tools or []
+        super().__init__(adapter=adapter, role=role, prompt=prompt)
 
-        '''Default fallback role'''
+        """ Preloading all events """
+        self._agent_event_handler.preload_events({
+            AgentEvents.ON_TOOL_CALL_REQUESTED,
+            AgentEvents.ON_TOOL_EXECUTION_STARTED,
+            AgentEvents.ON_TOOL_EXECUTION_COMPLETED,
+            AgentEvents.ON_TOOL_EXECUTION_FAILED,
 
-        self.role = role if role is not None else "You are Lily, a helpful agent developed by Shree"
-        '''Default fallback prompt'''
-
-        self.prompt = prompt if prompt is not None else "Answer to user prompts and use tools whenever necessary."
-        self.system_prompt: str = f"{self.role}\n\n{self.prompt}"
-        self.max_iter: int = max_iter
+            AgentEvents.ON_MEMORY_RETRIEVED,
+        })
         
+        self.tools: List[Tool] = tools or []
+        self.max_iter: int = max_iter
         self.formatter = formatter if formatter is not None else BaseFormatter()
-        self.adapter: AgentAdapter = adapter
-
-        self.tool_executor: Optional[ToolExecutor] = ToolExecutor(tools=self.tools) if self.tools else None
-
+        self.tool_executor: Optional[ToolExecutor] = ToolExecutor(tools=self.tools, event_handler=self._agent_event_handler) if self.tools else None
         self.conversation: Conversation =  Conversation(self.system_prompt)
-
         self.memory: Optional[AgentMemory] = memory
-
         self.policy: Optional[AgentPolicy] = policy
 
-        '''Private variables'''
-        self._use_conversational_history: bool = True
         
+        self._use_conversational_history: bool = True
         self._use_memory: bool = False
+        self._store_memory: bool = False
 
         if self.memory is not None:
             self._use_memory = True
 
         if self.policy is not None:
             self._apply_policy()
-
 
     def run_sync(self, query: str):
         '''
@@ -117,7 +118,21 @@ class LilyAgent:
                 self.tools = []
                 self._tool_registry = {}
                 self.tool_executor = None
-        
+
+            if self.policy.store_memory is not None:
+                self._store_memory = self.policy.store_memory
+
+    def event(self, func=None):
+        def decorator(fn):
+            event_name = fn.__name__
+            self._agent_event_handler.register(event_name, fn)
+
+            print(f"Registered {fn.__name__}")
+            return fn
+
+        if func is None:
+            return decorator
+        return decorator(func)
 
     async def run(self, query: str) -> str:
         '''
@@ -147,18 +162,21 @@ class LilyAgent:
 
         conversation.add_user(content=query)
 
-        '''Memory Retrieval'''
+        """ Memory Retrieval """
         if self._use_memory and self.memory is not None:
             memory_retrieval = await self.memory.retrieve(
                 query=query,
                 k=5
             )
 
-            '''Only retrieve memory if persistent memory module exists'''
-            for item in memory_retrieval:
-                conversation.add_system(
-                    content=f"[Memory] {item}"
-                )
+            if len(memory_retrieval) > 0:
+                '''Only retrieve memory if persistent memory module exists'''
+                for item in memory_retrieval:
+                    conversation.add_system(
+                        content=f"[Memory] {item}"
+                    )
+
+                await self._agent_event_handler.invoke(AgentEvents.ON_MEMORY_RETRIEVED, MemoryRetrieval(last_k=5, content=memory_retrieval))
 
         for _ in range(self.max_iter):
             response = await self.adapter.complete(
@@ -171,13 +189,15 @@ class LilyAgent:
 
                     conversation.add_assistant(content=response.content)
 
-                    '''Store to persistent memory if we have an persistent memory defined'''
-                    if self._use_memory and self.memory is not None:
+                    """ Store to persistent memory if we have an persistent memory defined """
+                    if self._store_memory and self.memory is not None:
                         await self.memory.push(
-                            text=response.content,
+                            text=query,
                             role="assistant",
                             metadata = {"type": "response"}
                         )
+
+                    await self._agent_event_handler.invoke(AgentEvents.ON_AGENT_TEXT_RESPONSE, TextResponse(content=response.content))
 
                     return response.content
                 
@@ -185,13 +205,16 @@ class LilyAgent:
                 if not self.tool_executor:
                     raise RuntimeError("Tool call was requested even though Agent has no tools defined.")
                 
+                await self._agent_event_handler.invoke(AgentEvents.ON_TOOL_CALL_REQUESTED)
+                                
                 if response.raw and response.raw.get("message"):
                     conversation.add_assistant(content=response.raw.get("message"))
+
                 tool_results = await self.tool_executor.execute(response.tool_calls)
 
                 conversation.add_tool_results(tool_results)
 
-                if self._use_memory and self.memory is not None:
+                if self._store_memory and self.memory is not None:
                         await self.memory.push(
                             text=str(tool_results),
                             role="assistant",

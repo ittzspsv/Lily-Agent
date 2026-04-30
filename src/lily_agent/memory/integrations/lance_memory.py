@@ -3,6 +3,7 @@ from __future__ import annotations
 from ..core.memory import AgentMemory
 from typing import List, Optional, TYPE_CHECKING, Dict, Any
 from ...embedder.core.embedder import Embedder
+from lancedb.index import IvfFlat
 
 import uuid
 import json
@@ -35,6 +36,8 @@ class LanceMemory(AgentMemory):
         self._db: Optional["AsyncConnection"] = None
         self._schema = None
 
+        self._index_initialized: bool = False
+
         
     async def _init(self):
         '''Check if the package is installed, else raise an ImportError'''
@@ -61,7 +64,6 @@ class LanceMemory(AgentMemory):
         '''Fetch all table names from the database'''
         table_names = await self._db.table_names()
 
-
         '''
         Check if the database contains the table name
         If not raise an runtime exception.
@@ -76,7 +78,8 @@ class LanceMemory(AgentMemory):
                 data=[],
                 schema=self._schema
             )
-        
+
+
     async def push(self, text: str, role: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         if self._table is not None:
 
@@ -92,6 +95,10 @@ class LanceMemory(AgentMemory):
                     "metadata": json.dumps(metadata or {})
                 }
             ])
+
+            if not self._index_initialized:
+                await self._table.create_index(column="embedding", config=IvfFlat(distance_type="cosine"))
+
         else:
             raise RuntimeError("Memory not initialized. Call create() first.")
 
@@ -101,7 +108,7 @@ class LanceMemory(AgentMemory):
 
         query_embedding: list[float] = await self.embedder.embed(text=query)
 
-        cursor = await self._table.search(query_embedding)
+        cursor = await self._table.search(query_embedding, vector_column_name="embedding")
         
         if role is not None:
             cursor = cursor.where(f"role = '{role}'")

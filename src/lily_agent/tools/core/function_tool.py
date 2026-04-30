@@ -3,8 +3,9 @@
 import inspect
 from pydantic import BaseModel, create_model, ValidationError
 from typing import Optional, Type, Callable, Dict, Any, Tuple ,get_type_hints, cast
-from ..base.tool_exceptions import ToolRuntimeError, ToolValidationError
+from ..errors.tool_exceptions import ToolRuntimeError, ToolValidationError
 from ..base.tool_base import Tool
+from functools import partial
 
 
 class FunctionTool(Tool):
@@ -158,6 +159,19 @@ class FunctionTool(Tool):
     
     def __str__(self) -> str:
         return self.name
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+
+        bound_func = partial(self.func, instance)
+
+        return FunctionTool(
+            func=bound_func,
+            name=self.name,
+            description=self.description,
+            parameters=self.parameters
+        )
 
     @property
     def input_schema(self) -> Dict[str, Any]:

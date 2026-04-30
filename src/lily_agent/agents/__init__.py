@@ -1,3 +1,3 @@
-from .agent import LilyAgent
+from .integrations.agent import LilyAgent
 
 __all__ = ["LilyAgent"]
