@@ -21,9 +21,17 @@ class AgentBase(ABC):
     def __init__(
             self,
             adapter: AgentAdapter,
-            role: Optional[str] = None ,
-            prompt: Optional[str] = None, 
+            name: Optional[str],
+            key: Optional[str],
+            role: Optional[str] = None,
+            prompt: Optional[str] = None,
     ) -> None:
+        
+        """ Agent Details"""
+        self.agent_id: str
+        self.name: str = name or "Lily"
+        self.key: str = key or "assistant"
+
         
         """ Default fallback role """
         self.role = role if role is not None else "You are Lily, a helpful agent developed by Shree"
@@ -45,8 +53,7 @@ class AgentBase(ABC):
         })
 
 
-
-    def run_sync(self, query: str):
+    def run_sync(self, query: str, user_id: Optional[str]=None):
         """
         ### Definition
         - Synchronous method used to run user query by interacting with the LLM
@@ -63,7 +70,7 @@ class AgentBase(ABC):
         try:
             asyncio.get_running_loop()
         except RuntimeError:
-            return asyncio.run(self.run(query=query))
+            return asyncio.run(self.run(query=query, user_id=user_id))
         else:
             raise RuntimeError(
                 "Cannot call run_sync() inside a running event loop. "
@@ -72,7 +79,7 @@ class AgentBase(ABC):
 
 
     @abstractmethod
-    async def run(self, query: str) -> str:
+    async def run(self, query: str, user_id: Optional[str]=None) -> str:
         """
         ### Definition
         - Asynchronous abstract method used to run user query by interacting with the LLM

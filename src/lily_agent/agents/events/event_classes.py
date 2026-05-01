@@ -5,10 +5,6 @@ from typing import List, Any, Optional
 class TextResponse:
     content: str
 
-@dataclass
-class MemoryRetrieval:
-    last_k: int
-    content: List[str]
 
 @dataclass
 class ToolResult:
@@ -17,3 +13,11 @@ class ToolResult:
     args: dict
     results: Any
     exception: Optional[Exception]
+
+@dataclass
+class MemoryStore:
+    user_id: str
+    agent_id: str
+    metadata: dict
+    user_query: str
+    facts: List[str]

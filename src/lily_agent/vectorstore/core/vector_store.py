@@ -1,8 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+
+@dataclass
+class VectorRetrieval:
+    id: str
+    text: str
+    embedding: Optional[List[float]]
+    user_id: str
+    agent_id: str
+    metadata: Optional[dict]
 
 class VectorStore(ABC):
-
     def __init__(self, dimensions: int) -> None:
         self.dimensions = dimensions
 
@@ -16,11 +25,11 @@ class VectorStore(ABC):
     
     
     @abstractmethod
-    async def push(self, text, embedding, metadata):
+    async def push(self, text, embedding, agent_id: str, user_id: Optional[str], metadata: Optional[dict]):
         ...
 
     @abstractmethod
-    async def retrieve(self, query_embedding, k, filters) -> List[str]:
+    async def retrieve(self, query_embedding, k, filters) -> List[VectorRetrieval]:
         ...
 
     @abstractmethod

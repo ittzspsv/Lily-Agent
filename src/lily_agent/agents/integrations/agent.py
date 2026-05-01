@@ -9,12 +9,14 @@ from ...memory.core.memory import MemoryBase
 from ...policy.agent_policy import AgentPolicy
 from ..core.agent_base import AgentBase
 from ..events.agent_events import AgentEvents
+from ...registry.agent_registry import AgentRegistry, AgentInfo
+from ...vectorstore.core.vector_store import VectorRetrieval
+from ...registry.integrations.json_registry import JSONRegistry
 
-import time
 
 from ..events.event_classes import (
     TextResponse,
-    MemoryRetrieval
+    MemoryStore
 )
 
 from typing import Optional, List
@@ -45,11 +47,14 @@ class LilyAgent(AgentBase):
             formatter: Optional[Formatter] = None, 
             role: Optional[str] = None ,
             prompt: Optional[str] = None, 
+            name: Optional[str] = None,
+            key: Optional[str] = None,
             max_iter: int = 3,
             policy: Optional[AgentPolicy] = None,
+            registry: Optional[AgentRegistry] = None
     ) -> None:
         
-        super().__init__(adapter=adapter, role=role, prompt=prompt)
+        super().__init__(adapter=adapter, role=role, prompt=prompt, name=name, key=key)
 
         """ Preloading all events """
         self._agent_event_handler.preload_events({
@@ -59,6 +64,7 @@ class LilyAgent(AgentBase):
             AgentEvents.ON_TOOL_EXECUTION_FAILED,
 
             AgentEvents.ON_MEMORY_RETRIEVED,
+            AgentEvents.ON_MEMORY_STORED
         })
         
         self.tools: List[Tool] = tools or []
@@ -68,6 +74,7 @@ class LilyAgent(AgentBase):
         self.conversation: Conversation =  Conversation(self.system_prompt)
         self.memory: Optional[MemoryBase] = memory
         self.policy: Optional[AgentPolicy] = policy
+        self.registry: AgentRegistry = registry or JSONRegistry()
 
         
         self._use_conversational_history: bool = True
@@ -80,7 +87,15 @@ class LilyAgent(AgentBase):
         if self.policy is not None:
             self._apply_policy()
 
-    def run_sync(self, query: str):
+        """ Only create a registry if self._store memory is true """
+        self.agent_id = self.registry.register(
+            agent_key=self.key,
+            name=self.name,
+            role=self.role,
+            prompt=self.prompt
+        )
+
+    def run_sync(self, query: str, user_id: Optional[str]=None):
         '''
         ### Definition
         - Method used to run user query by interacting with the LLM and making tool-calls whenever necessary
@@ -101,7 +116,7 @@ class LilyAgent(AgentBase):
         try:
             asyncio.get_running_loop()
         except RuntimeError:
-            return asyncio.run(self.run(query=query))
+            return asyncio.run(self.run(query=query, user_id=user_id))
         else:
             raise RuntimeError(
                 "Cannot call run_sync() inside a running event loop. "
@@ -134,7 +149,22 @@ class LilyAgent(AgentBase):
             return decorator
         return decorator(func)
 
-    async def run(self, query: str) -> str:
+    def register_tool(self, tools: Tool | List[Tool]):
+        """ Adding tools here """
+        if isinstance(tools, Tool):
+                self.tools.append(tools)
+            
+        else:
+            self.tools.extend(tools)
+
+
+        if self.tool_executor is not None:
+            self.tool_executor.register(tool=tools)
+        else:
+            self.tool_executor = ToolExecutor(tools=self.tools, event_handler=self._agent_event_handler)
+            
+
+    async def run(self, query: str, user_id: Optional[str]=None) -> str:
         '''
         ### Definition
         - Asynchronous method used to run user query by interacting with the LLM and making tool-calls whenever necessary
@@ -154,6 +184,7 @@ class LilyAgent(AgentBase):
         '''
         
         formatted_tools = self.formatter.format_many(self.tools) if self.tools else []
+        print(formatted_tools)
 
         if self._use_conversational_history:
             conversation = self.conversation
@@ -162,25 +193,30 @@ class LilyAgent(AgentBase):
 
         conversation.add_user(content=query)
 
-        start = time.time()
 
         """ Memory Retrieval """
         if self._use_memory and self.memory is not None:
-            memory_retrieval = await self.memory.retrieve(
+            """ Create Filters """
+            filters = {"agent_id": self.agent_id}
+
+            if user_id is not None:
+                filters["user_id"] = user_id
+
+
+            memory_retrieval: List[VectorRetrieval] = await self.memory.retrieve(
                 query=query,
+                filters=filters,
                 k=5
             )
 
-            print("MEMORY TIME:", time.time() - start)
-
             if len(memory_retrieval) > 0:
                 '''Only retrieve memory if persistent memory module exists'''
-                for item in memory_retrieval:
+                for retrieval in memory_retrieval:
                     conversation.add_system(
-                        content=f"[Memory] {item}"
+                        content=f"[Memory] {retrieval.text}"
                     )
 
-                await self._agent_event_handler.invoke(AgentEvents.ON_MEMORY_RETRIEVED, MemoryRetrieval(last_k=5, content=memory_retrieval))
+                await self._agent_event_handler.invoke(AgentEvents.ON_MEMORY_RETRIEVED, memory_retrieval)
 
         for _ in range(self.max_iter):
             response = await self.adapter.complete(
@@ -195,11 +231,12 @@ class LilyAgent(AgentBase):
 
                     """ Store to persistent memory if we have an persistent memory defined """
                     if self._store_memory and self.memory is not None:
-                        await self.memory.push(
+                        memory_store: MemoryStore = await self.memory.push(
                             text=query,
-                            role="assistant",
-                            metadata = {"type": "response"}
+                            agent_id=self.agent_id,
+                            user_id=user_id
                         )
+                        await self._agent_event_handler.invoke(AgentEvents.ON_MEMORY_STORED, memory_store)
 
                     await self._agent_event_handler.invoke(AgentEvents.ON_AGENT_TEXT_RESPONSE, TextResponse(content=response.content))
 
@@ -219,11 +256,14 @@ class LilyAgent(AgentBase):
                 conversation.add_tool_results(tool_results)
 
                 if self._store_memory and self.memory is not None:
-                        await self.memory.push(
+                        memory_store: MemoryStore = await self.memory.push(
                             text=str(tool_results),
-                            role="assistant",
-                            metadata = {"type": "tool_result"}
+                            agent_id=self.agent_id,
+                            user_id=user_id
                         )
+
+                        await self._agent_event_handler.invoke(AgentEvents.ON_MEMORY_STORED, memory_store)
+
                 
                 continue
 

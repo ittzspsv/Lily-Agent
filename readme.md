@@ -8,7 +8,7 @@
 A lightweight python framework for building modular LLM-powered AI agents.
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.8-pink" />
+  <img src="https://img.shields.io/badge/version-1.0.0-pink" />
 </p>
 
 ## Installation
@@ -95,7 +95,16 @@ print(agent.run_sync("What do you know about me?"))
 
 
 ### Documentation
-Work in progress....
+#### [Creating an Agent](/docs/agents/agents.md)
+- Learn how to build an custom agent
+#### [Defining Agent Tools](/docs/tools/tools.md)
+- Create custom tools for your agent to utilize.
+#### [Creating Custom Adapters](/docs/adapters/adapters.md)
+- Learn what are agent adapters and how they are powerful and flexible
+#### [Creating Custom Formatters](/docs/formatter/formatter.md)
+- Learn how to create custom tool schema formatters that various LLM expects
+#### [Agent Persistent Memory](/docs/vectorstore/vector_store.md)
+- Learn how to integrate a custom vector store for your agent.
 
 > **Note:** Package not yet released on PyPI. Stay tuned!
 >

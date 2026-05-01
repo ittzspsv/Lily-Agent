@@ -27,8 +27,8 @@ class AgentAdapter(ABC):
 
 ### Adapter Flow
 ```mermaid
-graph LR
-    A["Messages + Tools (User input + tool schema)"] --> B["Build Request\n(Convert to API format)"]
+graph TD
+    A["Messages + Tools (User input + tool schema)"] --> B["Build Request (Convert to API format)"]
     B --> C["Call LLM (Send request)"]
     C --> D["Raw Response from LLM (Unprocessed JSON)"]
     D --> E["Parse Response (Structure output)"]
@@ -317,3 +317,6 @@ def _parse_response(self, response: Any) -> LLMResponse:
         raw=response
     )
 ```
+
+### 8. Final Implementation.
+- Here is the [final code implementation](../../examples/adapters/groq_adapter.py) that you can refer.

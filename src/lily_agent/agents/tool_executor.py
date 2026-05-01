@@ -14,6 +14,22 @@ class ToolExecutor:
         self._tool_registry = {tool.name: tool for tool in tools}
         self._event_handler: Optional[EventDispatcher] = event_handler
 
+    def register(self, tool: Tool | List[Tool]) -> None:
+        tools = []
+        if isinstance(tool, Tool):
+            tools.append(tool)
+        else:
+            tools = tool
+
+        """ Building the tool registry """
+        for t in tools:
+            if t.name in self._tool_registry:
+                raise ValueError (f"Tool with '{t.name}' already exists")
+            
+            self._tool_registry[t.name] = t
+
+        """ Call the event dispatchor when registering a tool. """
+
     def execute_sync(self, tool_calls: List[ToolCall] | None) -> List[Message]:
         results: List[Message] = []
 

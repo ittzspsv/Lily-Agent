@@ -7,3 +7,4 @@ class AgentEvents:
     ON_AGENT_TEXT_RESPONSE = "on_agent_text_response"
 
     ON_MEMORY_RETRIEVED = "on_memory_retrieved"
+    ON_MEMORY_STORED = "on_memory_stored"

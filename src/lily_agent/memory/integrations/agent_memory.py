@@ -3,7 +3,8 @@ from typing import Any, Dict, List, Optional, Type
 from ..core.memory import MemoryBase
 from ...agents.core.agent_base import AgentBase
 from ...embedder.core.embedder import Embedder
-from ...vectorstore.core.vector_store import VectorStore
+from ...vectorstore.core.vector_store import VectorStore, VectorRetrieval
+from ...agents.events.event_classes import MemoryStore
 
 from ast import literal_eval
 
@@ -48,30 +49,39 @@ class AgentMemory(MemoryBase):
             vector_store=vector_store_
         )
 
-    async def push(self, text: str, role: str, metadata: Dict[str, Any] | None = None) -> None:
+    async def push(
+            self,
+            text: str,
+            agent_id: str,
+            user_id: Optional[str] = None,
+            metadata: Optional[dict] = {}
+        ) -> MemoryStore:
+        response = await self.llm.run(text)
+        facts: List[str] = literal_eval(response)
 
-        facts = await self.llm.run(text)
-
-        for fact in literal_eval(facts):
+        for fact in facts:
             embedding = await self.embedder.embed(text)
 
             await self.vector_store.push(
                 text=fact, 
-                embedding=embedding, 
-                metadata={
-                    "role": role,
-                    **(metadata or {})
-                }
+                embedding=embedding,
+                user_id=user_id,
+                agent_id=agent_id,
+                metadata=metadata
             )
+
+        return MemoryStore(
+            user_id=user_id or "__default__",
+            agent_id=agent_id,
+            metadata=metadata or {},
+            user_query=text,
+            facts=facts
+        )
     
-    async def retrieve(self, query: str, role: str | None = None, k: int = 5) -> List[str]:
+    async def retrieve(self, query: str, filters: Optional[Dict[str, Any]] = None, k: int = 5) -> List[VectorRetrieval]:
         query_embedding = await self.embedder.embed(query)
 
-        filters = {}
-        if role:
-            filters["role"] = role
-
-        results: List[str] = await self.vector_store.retrieve(
+        results: List[VectorRetrieval] = await self.vector_store.retrieve(
             query_embedding=query_embedding,
             k=k,
             filters=filters
@@ -79,8 +89,9 @@ class AgentMemory(MemoryBase):
 
         return results
     
-    async def delete(self, filters: Dict[str, Any]) -> None:
-        await self.vector_store.delete(filters=filters)
+    async def delete(self, filters: Optional[Dict[str, Any]] = None) -> None:
+        if filters is not None:
+            await self.vector_store.delete(filters=filters)
     
-    async def clear(self) -> None:
+    async def clear(self, **kwargs) -> None:
         await self.vector_store.clear()

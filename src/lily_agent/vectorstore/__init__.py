@@ -1,4 +1,4 @@
 from .integrations.lance import Lance
-from .core.vector_store import VectorStore
+from .core.vector_store import VectorStore, VectorRetrieval
 
-__all__ = ["Lance", "VectorStore"]
+__all__ = ["Lance", "VectorStore", "VectorRetrieval"]

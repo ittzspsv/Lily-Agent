@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, List, Optional, TYPE_CHECKING, Dict
-from ..core.vector_store import VectorStore
+from ..core.vector_store import VectorStore, VectorRetrieval
 
 if TYPE_CHECKING:
     import lancedb
@@ -60,7 +60,9 @@ class Lance(VectorStore):
             ('id', pyarrow.string()),
             ('text', pyarrow.string()),
             ('embedding', pyarrow.list_(pyarrow.float32(), self.dimensions)),
-            ('role', pyarrow.string()),
+
+            ('user_id', pyarrow.string()),
+            ('agent_id', pyarrow.string()),
             ('metadata', pyarrow.string())
         ])
 
@@ -86,13 +88,21 @@ class Lance(VectorStore):
                 schema=self._schema
             )
 
-    async def push(self, text, embedding, metadata):
+    async def push(self, 
+                   text: str, 
+                   embedding: List[float], 
+                   agent_id: str, 
+                   user_id: Optional[str],
+                   metadata: Optional[dict]
+        ) -> None:
         if self._table is not None:
             await self._table.add([
                 {
                     "id": str(uuid.uuid4()),
                     "text": text,
                     "embedding": embedding,
+                    "user_id": user_id or "__default__",
+                    "agent_id": agent_id,
                     "metadata": json.dumps(metadata or {})
                 }
             ])
@@ -102,7 +112,7 @@ class Lance(VectorStore):
         query_embedding: List[float],
         k: int = 5,
         filters: Dict[str, Any] | None = None
-    ) -> List[str]:
+    ) -> List[VectorRetrieval]:
 
         if self._table is None:
             raise RuntimeError("Memory not initialized. Call create() first.")
@@ -113,22 +123,24 @@ class Lance(VectorStore):
         )
 
         if filters:
-            conditions = []
-
             for key, value in filters.items():
-                if key in {"id", "text", "role"}:
-                    conditions.append(f"{key} = '{value}'")
 
-                else:
-                    conditions.append(f"metadata LIKE '%\"{key}\": \"{value}\"%'")
-
-            if conditions:
-                where_clause = " AND ".join(conditions)
-                cursor = cursor.where(where_clause)
+                if key in {"id", "text", "user_id", "agent_id"}:
+                    cursor = cursor.where(f"{key} == '{value}'")
 
         rows = await cursor.limit(k).to_list()
 
-        return [row["text"] for row in rows]
+        return [
+            VectorRetrieval(
+                id=row["id"],
+                text=row["text"],
+                embedding=row.get("embedding"),
+                user_id=row["user_id"],
+                agent_id=row["agent_id"],
+                metadata=row["metadata"]
+            )
+            for row in rows
+        ]
     
     async def delete(self, filters: Dict[str, Any]) -> None:
         if self._table is None:
@@ -137,13 +149,16 @@ class Lance(VectorStore):
         if not filters:
             raise ValueError("Filters required for delete operation")
 
+        allowed_keys = {"id", "text", "user_id", "agent_id"}
+
         conditions = []
 
         for key, value in filters.items():
-            if key in {"id", "text", "role"}:
-                conditions.append(f"{key} = '{value}'")
-            else:
-                conditions.append(f"metadata LIKE '%\"{key}\": \"{value}\"%'")
+            if key in allowed_keys:
+                conditions.append(f"{key} == '{value}'")
+
+        if not conditions:
+            raise ValueError("No valid filters provided")
 
         where_clause = " AND ".join(conditions)
 
