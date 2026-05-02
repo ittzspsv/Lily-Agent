@@ -20,14 +20,18 @@ class AgentTool(Tool):
         
         self.agent = agent
 
-    def execute_sync(self, **kwargs) -> str:
-        input_ = kwargs["input"]
-        return self.agent.run_sync(str(input_))
+    def execute_sync(self, tool_args: dict, runtime_args: dict) -> str:
+        input_ = tool_args["input"]
+
+        return self.agent.run_sync(
+            str(input_),
+            **runtime_args
+        )
     
     
-    async def execute(self, **kwargs) -> str:
-        input_ = kwargs["input"]
-        return await self.agent.run(str(input_))
+    async def execute(self, tool_args: dict, runtime_args: dict) -> str:
+        input_ = tool_args["input"]
+        return await self.agent.run(str(input_), **runtime_args)
     
     @property
     def input_schema(self) -> Dict[str, Any]:

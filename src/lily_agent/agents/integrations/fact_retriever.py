@@ -15,7 +15,7 @@ class FactRetriever(AgentBase):
 
         super().__init__(adapter=adapter, role=self.role, prompt=self.prompt, name=None, key=None)
 
-    async def run(self, query: str, user_id: Optional[str]=None) -> str:
+    async def run(self, query: str, user_id: Optional[str]=None, **kwargs) -> str:
         response = await self.adapter.complete(messages=[Message(role="system", content=self.system_prompt), Message(role="user", content=query)], tools=[])
         if response.content is not None:
             return response.content

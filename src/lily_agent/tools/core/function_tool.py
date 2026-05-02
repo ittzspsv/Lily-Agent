@@ -79,15 +79,15 @@ class FunctionTool(Tool):
 
         return schema
     
-    def _validate(self, **kwargs) -> dict:
+    def _validate(self, **tool_args) -> dict:
         if self.parameters is not None:
             try:
-                return self.parameters(**kwargs).model_dump()
+                return self.parameters(**tool_args).model_dump()
             except ValidationError as e:
                 raise ToolValidationError(self.name, e.errors())
-        return kwargs
+        return tool_args
 
-    def execute_sync(self, **kwargs):
+    def execute_sync(self, tool_args: dict, runtime_args: dict):
         '''
         ### Definition
         - Used to execute the function defined in this tool in a synchronous manner.
@@ -109,8 +109,8 @@ class FunctionTool(Tool):
             )
         
         try:
-            kwargs = self._validate(**kwargs)
-            return self.func(**kwargs)
+            kwargs = self._validate(**tool_args)
+            return self.func(**tool_args, **runtime_args)
 
         except ToolValidationError:
             raise
@@ -121,7 +121,7 @@ class FunctionTool(Tool):
         except Exception as e:
             raise ToolRuntimeError(self.name, str(e))
         
-    async def execute(self, **kwargs):
+    async def execute(self, tool_args: dict, runtime_args: dict):
         '''
         ### Definition
         - Used to execute not the function defined in this tool in a asynchronous manner.
@@ -137,12 +137,12 @@ class FunctionTool(Tool):
           - If any runtime errors are throwed during the execution.
         '''
         try:
-            kwargs = self._validate(**kwargs)
+            tool_args = self._validate(**tool_args)
 
             if self._async:
-                return await self.func(**kwargs)
+                return await self.func(**tool_args, **runtime_args)
             else:
-                return self.func(**kwargs)
+                return self.func(**tool_args, **runtime_args)
             
         except ToolValidationError:
             raise
@@ -152,8 +152,7 @@ class FunctionTool(Tool):
 
         except Exception as e:
             raise ToolRuntimeError(self.name, str(e))
-
-    
+ 
     def __repr__(self) -> str:
         return f'Tool(name="{self.name}", params={list(self.parameters.model_fields.keys())})'
     

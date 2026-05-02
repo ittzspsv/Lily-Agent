@@ -95,7 +95,7 @@ class LilyAgent(AgentBase):
             prompt=self.prompt
         )
 
-    def run_sync(self, query: str, user_id: Optional[str]=None):
+    def run_sync(self, query: str, user_id: Optional[str]=None, **kwargs):
         '''
         ### Definition
         - Method used to run user query by interacting with the LLM and making tool-calls whenever necessary
@@ -163,8 +163,7 @@ class LilyAgent(AgentBase):
         else:
             self.tool_executor = ToolExecutor(tools=self.tools, event_handler=self._agent_event_handler)
             
-
-    async def run(self, query: str, user_id: Optional[str]=None) -> str:
+    async def run(self, query: str, user_id: Optional[str]=None, **kwargs) -> str:
         '''
         ### Definition
         - Asynchronous method used to run user query by interacting with the LLM and making tool-calls whenever necessary
@@ -184,7 +183,6 @@ class LilyAgent(AgentBase):
         '''
         
         formatted_tools = self.formatter.format_many(self.tools) if self.tools else []
-        print(formatted_tools)
 
         if self._use_conversational_history:
             conversation = self.conversation
@@ -251,7 +249,7 @@ class LilyAgent(AgentBase):
                 if response.raw and response.raw.get("message"):
                     conversation.add_assistant(content=response.raw.get("message"))
 
-                tool_results = await self.tool_executor.execute(response.tool_calls)
+                tool_results = await self.tool_executor.execute(response.tool_calls, **kwargs)
 
                 conversation.add_tool_results(tool_results)
 

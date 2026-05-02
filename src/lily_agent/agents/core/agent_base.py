@@ -53,7 +53,7 @@ class AgentBase(ABC):
         })
 
 
-    def run_sync(self, query: str, user_id: Optional[str]=None):
+    def run_sync(self, query: str, user_id: Optional[str]=None, **kwargs):
         """
         ### Definition
         - Synchronous method used to run user query by interacting with the LLM
@@ -79,7 +79,7 @@ class AgentBase(ABC):
 
 
     @abstractmethod
-    async def run(self, query: str, user_id: Optional[str]=None) -> str:
+    async def run(self, query: str, user_id: Optional[str]=None, **kwargs) -> str:
         """
         ### Definition
         - Asynchronous abstract method used to run user query by interacting with the LLM
@@ -101,4 +101,4 @@ class AgentBase(ABC):
 
         if func is None:
             return decorator
-        return decorator(func)
+        return decorator(func) 

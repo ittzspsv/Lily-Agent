@@ -71,7 +71,7 @@ class AgentMemory(MemoryBase):
             )
 
         return MemoryStore(
-            user_id=user_id or "__default__",
+            user_id=user_id or "__default__", 
             agent_id=agent_id,
             metadata=metadata or {},
             user_query=text,

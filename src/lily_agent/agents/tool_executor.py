@@ -60,7 +60,7 @@ class ToolExecutor:
 
         return results 
     
-    async def execute(self, tool_calls: List[ToolCall] | None)-> List[Message]:
+    async def execute(self, tool_calls: List[ToolCall] | None, **kwargs)-> List[Message]:
         results: List[Message] = []
 
         if tool_calls is None:
@@ -82,7 +82,7 @@ class ToolExecutor:
             tool = self._tool_registry[tool_call.name]
 
             try:
-                result = await tool.execute(**tool_call.input)
+                result = await tool.execute(tool_args=tool_call.input, runtime_args=kwargs)
 
                 if self._event_handler is not None:
                     await self._event_handler.invoke(AgentEvents.ON_TOOL_EXECUTION_COMPLETED, ToolResult(

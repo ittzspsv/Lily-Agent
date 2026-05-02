@@ -19,11 +19,11 @@ class Tool(ABC):
         self.description = description
 
     @abstractmethod
-    async def execute(self, **kwargs) -> Any:
+    async def execute(self, tool_args: dict, runtime_args: dict) -> Any:
         raise NotImplementedError
 
     @abstractmethod
-    def execute_sync(self, **kwargs) -> Any:
+    def execute_sync(self, tool_args: dict, runtime_args: dict) -> Any:
         raise NotImplementedError
 
 
