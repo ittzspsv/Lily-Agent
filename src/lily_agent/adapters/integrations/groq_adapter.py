@@ -20,7 +20,7 @@ class GroqAdapter(AgentAdapter):
 
         super().__init__(model, base_endpoint, path ,api_key, timeout ,**kwargs)
 
-    def _build_request(self, messages: List[Message], tools: List[dict], think: bool) -> dict:
+    def _build_request(self, messages: List[Message], tools: List[dict]) -> dict:
         '''Start by creating a list of messages''' 
         messages_list: List[dict] = []
 
@@ -53,8 +53,11 @@ class GroqAdapter(AgentAdapter):
         '''Let's finalise the payload and return it.'''
         request = {
             "model": self.model,
-            "messages": messages_list,
+            "messages": messages_list
         }
+
+        if not self.think:
+            request["reasoning_effort"] = "none"
 
         '''If we have tools on our agent, lets add an key-value Pair'''
         if tools:
@@ -62,7 +65,7 @@ class GroqAdapter(AgentAdapter):
             request["tool_choice"] = "auto" # Expected by the api.
 
         '''Convert thinking to temperature.'''
-        if think:
+        if self.think:
             request["temperature"] = 0.2
 
         return request

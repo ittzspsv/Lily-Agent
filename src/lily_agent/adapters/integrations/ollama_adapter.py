@@ -20,7 +20,7 @@ class OllamaAdapter(AgentAdapter):
         super().__init__(model, base_endpoint, path, api_key ,timeout ,**kwargs)
 
 
-    def _build_request(self, messages: List[Message], tools: List[dict], think: bool) -> dict:
+    def _build_request(self, messages: List[Message], tools: List[dict]) -> dict:
         '''
         ### Definition
         - Builds dynamic requests payload for the LLM to understand. 
@@ -59,7 +59,7 @@ class OllamaAdapter(AgentAdapter):
             "model": self.model,
             "messages": messages_list,
             "stream": False,
-            "think": think
+            "think": self.think
         }
 
         if tools is not None and len(tools) > 0:

@@ -38,6 +38,7 @@ class AgentAdapter(ABC):
             path: Optional[str]=None,
             api_key: Optional[str]=None,
             timeout: float = 300.0,
+            think: bool = False,
             **kwargs
       ) -> None:
         
@@ -46,6 +47,7 @@ class AgentAdapter(ABC):
         self.path = path or ""
         self.api_key = api_key
         self.config = kwargs
+        self.think = think
         self.timeout = timeout
         self._headers: dict = {"Content-Type": "application/json"}
 
@@ -55,7 +57,7 @@ class AgentAdapter(ABC):
         self._network_client = httpx.AsyncClient(timeout=timeout)
 
 
-    def complete_sync(self, messages: List[Message], tools: List[dict], think: bool=False) -> LLMResponse:
+    def complete_sync(self, messages: List[Message], tools: List[dict]) -> LLMResponse:
         '''
         ### Definition
         - Main entry point for generating an response from the LLM.
@@ -72,7 +74,7 @@ class AgentAdapter(ABC):
           - Structured LLM response,
         '''
         try:
-            request = self._build_request(messages, tools, think)
+            request = self._build_request(messages, tools)
             response = self._call_sync(request)
             return self._parse_response(response)
 
@@ -82,7 +84,7 @@ class AgentAdapter(ABC):
         except Exception as e:
             raise AdapterError(f"Unexpected error occurred: {e}") from e
         
-    async def complete(self, messages: List[Message], tools: List[dict], think: bool = False) -> LLMResponse:
+    async def complete(self, messages: List[Message], tools: List[dict]) -> LLMResponse:
       '''
         ### Definition
         - Main asynchronous entry point for generating an response from the LLM.
@@ -99,7 +101,7 @@ class AgentAdapter(ABC):
           - Structured LLM response,
         '''
       try:
-          request = self._build_request(messages, tools, think)
+          request = self._build_request(messages, tools)
           response = await self._call(request)
           return self._parse_response(response)
 
@@ -110,7 +112,7 @@ class AgentAdapter(ABC):
           raise AdapterError(f"Unexpected error occurred: {e}") from e
 
     @abstractmethod
-    def _build_request(self, messages: List[Message], tools: List[dict], think: bool) -> dict:
+    def _build_request(self, messages: List[Message], tools: List[dict]) -> dict:
         '''
         ### Definition
         - Builds dynamic requests payload for the LLM to understand. 

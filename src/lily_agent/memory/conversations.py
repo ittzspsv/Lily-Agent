@@ -20,8 +20,13 @@ class Conversation:
     def add_tool_results(self, results: List[Message]):
         self.messages.extend(results)
 
-    def get_messages(self) -> List[Message]:
-        return list(self.messages)
+    def get_messages(self, k: int = 5) -> List[Message]:
+        if not self.messages:
+            return []
+
+        system = self.messages[:1]
+        recent = self.messages[1:][-k:]
+        return system + recent
     
     def reset(self, system_prompt: str) -> None:
         self.messages = [Message(role="system", content=system_prompt)]

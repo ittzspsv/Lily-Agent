@@ -106,4 +106,7 @@ Thumbs.db
 *.db
 
 # Personal addings
-.linkedin/
+linkedin/
+
+# Projects
+examples/
