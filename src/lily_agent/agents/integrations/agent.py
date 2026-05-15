@@ -152,8 +152,7 @@ class LilyAgent(AgentBase):
     def register_tool(self, tools: Tool | List[Tool]):
         """ Adding tools here """
         if isinstance(tools, Tool):
-                self.tools.append(tools)
-            
+                self.tools.append(tools)    
         else:
             self.tools.extend(tools)
 
@@ -168,6 +167,7 @@ class LilyAgent(AgentBase):
             query: str, 
             user_id: Optional[str]=None, 
             use_tools: bool=True,
+            tools: Optional[List[Tool]]=None,
             **kwargs
         ) -> str:
         """
@@ -187,8 +187,12 @@ class LilyAgent(AgentBase):
         ### Raises
         - **MaxIterationsError** => raises when the maximum number of iterations is reached without providing an concluding response
         """
-        
-        formatted_tools = self.formatter.format_many(self.tools) if self.tools and use_tools else []
+
+        if tools is None:
+            formatted_tools = self.formatter.format_many(self.tools) if self.tools and use_tools else []
+        else:
+            """ Runtime Tool Injection """
+            formatted_tools = self.formatter.format_many(tools)
 
         if self._use_conversational_history:
             conversation = self.conversation
