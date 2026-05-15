@@ -163,7 +163,13 @@ class LilyAgent(AgentBase):
         else:
             self.tool_executor = ToolExecutor(tools=self.tools, event_handler=self._agent_event_handler)
             
-    async def run(self, query: str, user_id: Optional[str]=None, **kwargs) -> str:
+    async def run(
+            self, 
+            query: str, 
+            user_id: Optional[str]=None, 
+            use_tools: bool=True,
+            **kwargs
+        ) -> str:
         """
         ### Definition
         - Asynchronous method used to run user query by interacting with the LLM and making tool-calls whenever necessary
@@ -182,7 +188,7 @@ class LilyAgent(AgentBase):
         - **MaxIterationsError** => raises when the maximum number of iterations is reached without providing an concluding response
         """
         
-        formatted_tools = self.formatter.format_many(self.tools) if self.tools else []
+        formatted_tools = self.formatter.format_many(self.tools) if self.tools and use_tools else []
 
         if self._use_conversational_history:
             conversation = self.conversation
