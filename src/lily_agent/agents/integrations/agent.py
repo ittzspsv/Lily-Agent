@@ -165,6 +165,7 @@ class LilyAgent(AgentBase):
     def clear_tools(self):
         if self.tool_executor is not None:
             self.tool_executor.clear()
+            self.tools.clear()
 
     async def run(
             self, 
