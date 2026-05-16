@@ -30,6 +30,15 @@ class ToolExecutor:
 
         """ Call the event dispatchor when registering a tool. """
 
+    def clear(self, tool: Optional[Tool | List[Tool]]=None):
+        if tool is None:
+            removed = list(self._tool_registry.values())
+            self._tool_registry.clear()
+
+            if self._event_handler and removed:
+                """ Call the event dispatchor when removing a tool. """
+            return
+
     def execute_sync(self, tool_calls: List[ToolCall] | None) -> List[Message]:
         results: List[Message] = []
 

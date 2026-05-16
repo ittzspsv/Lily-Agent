@@ -161,13 +161,15 @@ class LilyAgent(AgentBase):
             self.tool_executor.register(tool=tools)
         else:
             self.tool_executor = ToolExecutor(tools=self.tools, event_handler=self._agent_event_handler)
-            
+    
+    def clear_tools(self):
+        if self.tool_executor is not None:
+            self.tool_executor.clear()
+
     async def run(
             self, 
             query: str, 
-            user_id: Optional[str]=None, 
-            use_tools: bool=True,
-            tools: Optional[List[Tool]]=None,
+            user_id: Optional[str]=None,
             **kwargs
         ) -> str:
         """
@@ -188,12 +190,9 @@ class LilyAgent(AgentBase):
         - **MaxIterationsError** => raises when the maximum number of iterations is reached without providing an concluding response
         """
 
-        if tools is None:
-            formatted_tools = self.formatter.format_many(self.tools) if self.tools and use_tools else []
-        else:
-            """ Runtime Tool Injection """
-            formatted_tools = self.formatter.format_many(tools)
 
+        formatted_tools = self.formatter.format_many(self.tools) if self.tools else []
+        
         if self._use_conversational_history:
             conversation = self.conversation
         else:

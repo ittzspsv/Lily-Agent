@@ -19,7 +19,14 @@ class FunctionTool(Tool):
     - **description**: `Optional[str]` ((description of what the tool does and when it should be used)
     - **parameters**: `Type[BaseModel]` (pydantic class model for input type definitions)
     """
-    def __init__(self, func: Callable , name: Optional[str] ,description: Optional[str], parameters: Optional[Type[BaseModel]]) -> None:
+    def __init__(
+            self, 
+            func: Callable , 
+            name: Optional[str] ,
+            description: Optional[str], 
+            parameters: Optional[Type[BaseModel]],
+            overload: bool = False
+        ) -> None:
         
         if func is None:
             raise ToolRuntimeError("No function has been passed onto the tool!")
@@ -42,6 +49,8 @@ class FunctionTool(Tool):
             self.parameters: Type[BaseModel] = self._model_builder(func)
         else:
             self.parameters: Type[BaseModel] = parameters
+
+        self.overload = overload
 
     def _model_builder(self, func: Callable) -> type[BaseModel]:
         signature: inspect.Signature = inspect.signature(func)
@@ -110,7 +119,10 @@ class FunctionTool(Tool):
         
         try:
             kwargs = self._validate(**tool_args)
-            return self.func(**tool_args, **runtime_args)
+            if self.overload:
+                return self.func(**tool_args, **runtime_args)
+            else:
+                return self.func(**tool_args)
 
         except ToolValidationError:
             raise
@@ -139,10 +151,14 @@ class FunctionTool(Tool):
         try:
             tool_args = self._validate(**tool_args)
 
+            args = tool_args
+            if self.overload:
+                args = {**tool_args, **runtime_args}
+
             if self._async:
-                return await self.func(**tool_args, **runtime_args)
-            else:
-                return self.func(**tool_args, **runtime_args)
+                return await self.func(**args)
+
+            return self.func(**args)
             
         except ToolValidationError:
             raise
