@@ -1,10 +1,10 @@
 from typing import Any, Dict, List, Optional, Type
 
-from ..core.memory import MemoryBase
-from ...agents.core.agent_base import AgentBase
-from ...embedder.core.embedder import Embedder
-from ...vectorstore.core.vector_store import VectorStore, VectorRetrieval
-from ...agents.events.event_classes import MemoryStore
+from ..memory import MemoryBase
+from ...agents.agent import AgentBase
+from ...embedder.embedder import Embedder
+from ...vectorstore.vector_store import VectorStore, VectorRetrieval
+from ...schemas.events import MemoryStore
 
 from ast import literal_eval
 

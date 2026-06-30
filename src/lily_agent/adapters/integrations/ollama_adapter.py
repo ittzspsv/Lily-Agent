@@ -1,7 +1,7 @@
-from ..core.adapter import AgentAdapter
+from ..adapter import AgentAdapter
 from typing import List, Any, Dict, Optional
-from ..core.adapter_classes import LLMResponse, Message, ToolCall
-from ..core.adapter_exceptions import AdapterError
+from ...schemas.adapters import LLMResponse, Message, ToolCall
+from ...exceptions.adapter import AdapterError
 
 import httpx
 import json

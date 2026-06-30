@@ -3,11 +3,11 @@
 from ..tools.base.tool_base import Tool
 from typing import List, Optional
 from ..tools.errors.tool_exceptions import ToolValidationError, ToolRuntimeError
-from .errors.agent_exceptions import ToolNotFoundError
-from ..adapters.core.adapter_classes import Message, ToolCall
+from ..exceptions.agent import ToolNotFoundError
+from ..schemas.adapters import Message, ToolCall
 from .events.event_dispatcher import EventDispatcher
 from .events.agent_events import AgentEvents
-from .events.event_classes import ToolResult
+from ..schemas.events import ToolResult
 
 class ToolExecutor:
     def __init__(self, tools: List[Tool], event_handler: Optional[EventDispatcher]) -> None:

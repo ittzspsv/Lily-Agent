@@ -1,20 +1,20 @@
-from ...adapters.core.adapter import AgentAdapter
+from ...adapters.adapter import AgentAdapter
 from ...tools.base.tool_base import Tool
 from ...formatters.base_formatter import BaseFormatter
 from ...formatters.formatter import Formatter
-from ..errors.agent_exceptions import MaxIterationsError
+from ...exceptions.agent import MaxIterationsError
 from ..tool_executor import ToolExecutor
 from ...memory.conversations import Conversation
-from ...memory.core.memory import MemoryBase
-from ...policy.agent_policy import AgentPolicy
-from ..core.agent_base import AgentBase
+from ...memory.memory import MemoryBase
+from ...schemas.agent_policy import AgentPolicy
+from ..agent import AgentBase
 from ..events.agent_events import AgentEvents
-from ...registry.agent_registry import AgentRegistry, AgentInfo
-from ...vectorstore.core.vector_store import VectorRetrieval
+from ...registry.agent_registry import AgentRegistry
+from ...vectorstore.vector_store import VectorRetrieval
 from ...registry.integrations.json_registry import JSONRegistry
 
 
-from ..events.event_classes import (
+from ...schemas.events import (
     TextResponse,
     MemoryStore
 )
@@ -56,7 +56,6 @@ class LilyAgent(AgentBase):
         
         super().__init__(adapter=adapter, role=role, prompt=prompt, name=name, key=key)
 
-        """ Preloading all events """
         self._agent_event_handler.preload_events({
             AgentEvents.ON_TOOL_CALL_REQUESTED,
             AgentEvents.ON_TOOL_EXECUTION_STARTED,
@@ -87,7 +86,6 @@ class LilyAgent(AgentBase):
         if self.policy is not None:
             self._apply_policy()
 
-        """ Only create a registry if self._store memory is true """
         self.agent_id = self.registry.register(
             agent_key=self.key,
             name=self.name,
@@ -149,20 +147,18 @@ class LilyAgent(AgentBase):
             return decorator
         return decorator(func)
 
-    def register_tool(self, tools: Tool | List[Tool]):
-        """ Adding tools here """
+    def register_tool(self, tools: Tool | List[Tool]) -> None:
         if isinstance(tools, Tool):
                 self.tools.append(tools)    
         else:
             self.tools.extend(tools)
-
 
         if self.tool_executor is not None:
             self.tool_executor.register(tool=tools)
         else:
             self.tool_executor = ToolExecutor(tools=self.tools, event_handler=self._agent_event_handler)
     
-    def clear_tools(self):
+    def clear_tools(self) -> None:
         if self.tool_executor is not None:
             self.tool_executor.clear()
             self.tools.clear()
@@ -218,7 +214,7 @@ class LilyAgent(AgentBase):
             )
 
             if len(memory_retrieval) > 0:
-                '''Only retrieve memory if persistent memory module exists'''
+                """ Only retrieve memory if persistent memory module exists """
                 for retrieval in memory_retrieval:
                     conversation.add_system(
                         content=f"[Memory] {retrieval.text}"

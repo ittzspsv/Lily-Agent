@@ -1,4 +1,4 @@
-from ..core.embedder import Embedder
+from ..embedder import Embedder
 from typing import Any, Dict, Optional, List
 
 class OllamaEmbedder(Embedder):

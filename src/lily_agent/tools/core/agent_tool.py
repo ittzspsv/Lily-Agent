@@ -7,7 +7,7 @@ from ..base.tool_base import Tool
 from typing import Dict, Any
 
 if TYPE_CHECKING:
-    from ...agents.integrations.agent import LilyAgent
+    from ...agents.integrations.lily_agent import LilyAgent
 
 from .agent_classes import AgentToolInput
 

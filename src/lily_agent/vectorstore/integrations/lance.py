@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, List, Optional, TYPE_CHECKING, Dict
-from ..core.vector_store import VectorStore, VectorRetrieval
+from ..vector_store import VectorStore, VectorRetrieval
 
 if TYPE_CHECKING:
     import lancedb

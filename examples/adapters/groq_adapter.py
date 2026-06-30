@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from lily_agent.adapters.core import AgentAdapter
-from lily_agent.adapters.core.adapter_classes import Message, LLMResponse, ToolCall
-from lily_agent.adapters.core.adapter_exceptions import AdapterError
+from lily_agent.schemas.adapters import Message, LLMResponse, ToolCall
+from lily_agent.exceptions.adapter import AdapterError
 
 import json
 
@@ -20,11 +20,11 @@ class GroqAdapter(AgentAdapter):
 
         super().__init__(model, base_endpoint, path ,api_key, timeout ,**kwargs)
 
-    def _build_request(self, messages: List[Message], tools: List[dict], think: bool) -> dict:
+    def _build_request(self, messages: List[Message], tools: List[dict]) -> dict:
         '''Start by creating a list of messages''' 
         messages_list: List[dict] = []
 
-        '''Iterate through all the messages one by one'''
+        """ Iterate through all the messages one by one """
         for message in messages:
             '''Get the content of the message'''
             message_content = message.content
@@ -40,7 +40,7 @@ class GroqAdapter(AgentAdapter):
                 "content": message_content
             } 
 
-            '''If the message contains a role which is a tool_result, then we set the map role => tool.  Else we set the default role that we got from the agent.'''
+            """ If the message contains a role which is a tool_result, then we set the map role => tool.  Else we set the default role that we got from the agent. """
             if message.role == "tool_result":
                 messages_mapped["role"] = "tool"
                 if message.tool_call_id:
@@ -50,44 +50,40 @@ class GroqAdapter(AgentAdapter):
                     
             messages_list.append(messages_mapped)
 
-        '''Let's finalise the payload and return it.'''
+        """ Let's finalise the payload and return it. """
         request = {
             "model": self.model,
             "messages": messages_list,
         }
 
-        '''If we have tools on our agent, lets add an key-value Pair'''
+        """ If we have tools on our agent, lets add an key-value Pair """
         if tools:
             request["tools"] = tools
             request["tool_choice"] = "auto" # Expected by the api.
-
-        '''Convert thinking to temperature.'''
-        if think:
-            request["temperature"] = 0.2
 
         return request
     
     def _parse_response(self, response: Any) -> LLMResponse:
 
-        '''Getting the choices dictionary from the response'''
+        """ Getting the choices dictionary from the response """
         choices = response.get("choices", [])
 
         '''If there is no choices returned by the api then Let's raise an exception'''
         if not choices:
             raise AdapterError("No choices returned from Groq response")
 
-        '''Let's extract the first message and it's contents from choices'''
+        """ Let's extract the first message and it's contents from choices """
         message = choices[0].get("message", {})
         content = message.get("content", None)
 
-        '''Define an empty list of tool_calls that the agent expects'''
+        """ Define an empty list of tool_calls that the agent expects """
         tool_calls: List[ToolCall] = []
 
-        '''We will retrive the tool_calls that the LLM returned in the response'''
+        """ We will retrive the tool_calls that the LLM returned in the response """
         raw_tool_calls = message.get("tool_calls")
 
         if raw_tool_calls: # If there is a tool_call requested by the LLM
-            '''We iterate through the tool call to get expected parameters to build ToolCall'''
+            """ We iterate through the tool call to get expected parameters to build ToolCall """
             for tool_call in raw_tool_calls:
                 function: Optional[Dict] = tool_call.get("function")
                 if function is None:
@@ -100,7 +96,7 @@ class GroqAdapter(AgentAdapter):
                 if tool_name is None:
                     raise AdapterError("Tool call missing 'name'")
 
-                '''Getting the arguments of the function extracted by the LLM'''
+                """ Getting the arguments of the function extracted by the LLM """
                 arguments = function.get("arguments", "{}")
                 tool_arguments = json.loads(arguments)
 
@@ -113,7 +109,7 @@ class GroqAdapter(AgentAdapter):
                     )
                 )
 
-            '''We return an LLMResponse with the type=tool_call and all the parameters extracted'''
+            """ We return an LLMResponse with the type=tool_call and all the parameters extracted """
 
             return LLMResponse(
                 response_type="tool_call",
@@ -122,7 +118,7 @@ class GroqAdapter(AgentAdapter):
                 raw=response
             )
 
-        '''Default Fallback finish_reason = stop'''    
+        """ Default Fallback finish_reason = stop """ 
         return LLMResponse(
             response_type="text",
             content=content,

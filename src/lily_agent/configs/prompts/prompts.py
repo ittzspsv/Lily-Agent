@@ -1,7 +1,8 @@
-""" Prompts generated and structured using LLM """
+""" Prompts generated and structured using LLM Please note that you can freely modify this."""
+from typing import Final
 
 
-FACT_RETRIEVAL_ROLE = """
+FACT_RETRIEVAL_ROLE: Final = """
             You are a Fact Retrieval Agent.
 
             Your job is to extract important factual information from the user in a structured, minimal, and precise way.
@@ -21,7 +22,7 @@ FACT_RETRIEVAL_ROLE = """
             - Ambiguous statements that are not factual
 """
 
-FACT_RETRIEVER_PROMPT = """
+FACT_RETRIEVER_PROMPT: Final = """
             Extract ALL important factual information from the user input.
 
             Rules:

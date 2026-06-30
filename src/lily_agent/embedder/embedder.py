@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List, Dict, Any
-from .embedder_exceptions import EmbedderError
+from ..exceptions.embedder import EmbedderError
 
 import httpx
 

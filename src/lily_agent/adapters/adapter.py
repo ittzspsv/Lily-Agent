@@ -3,8 +3,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 from typing import List, Any
-from .adapter_exceptions import AdapterError
-from .adapter_classes import LLMResponse, Message
+from ..exceptions.adapter import AdapterError
+from ..schemas.adapters import LLMResponse, Message
 
 import asyncio
 import httpx

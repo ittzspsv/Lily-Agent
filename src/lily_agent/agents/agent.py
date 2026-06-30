@@ -1,10 +1,13 @@
-from ...adapters.core.adapter import AgentAdapter
+from ..adapters.adapter import AgentAdapter
 from typing import Optional
 from abc import ABC, abstractmethod
-from ..events.event_dispatcher import EventDispatcher
-from ..events.agent_events import AgentEvents
+from .events.event_dispatcher import EventDispatcher
+from .events.agent_events import AgentEvents
 
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AgentBase(ABC):
     """
@@ -33,24 +36,27 @@ class AgentBase(ABC):
         self.key: str = key or "assistant"
 
         
-        """ Default fallback role """
         self.role = role if role is not None else "You are Lily, a helpful agent developed by Shree"
 
-        """ Default fallback prompt """
         self.prompt = prompt if prompt is not None else "Respond accurately and effectively to user requests."
         self.system_prompt: str = f"{self.role}\n\n{self.prompt}"
 
-        """ Adapter Assignment """
         self.adapter: AgentAdapter = adapter
 
-
-        """ Event Handlers """
         self._agent_event_handler = EventDispatcher()
 
-        """ Preload an event """
         self._agent_event_handler.preload_events({
             AgentEvents.ON_AGENT_TEXT_RESPONSE
         })
+
+        logger.info(
+            "Initialized Agent",
+            extra = {
+                "agent_name": self.name,
+                "key": self.key,
+                "role": self.role
+            }
+        )
 
 
     def run_sync(self, query: str, user_id: Optional[str]=None, **kwargs):

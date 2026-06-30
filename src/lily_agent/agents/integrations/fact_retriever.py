@@ -1,9 +1,9 @@
 from typing import Optional
 
-from ..core.agent_base import AgentBase
-from ...adapters.core.adapter import AgentAdapter
-from ...adapters.core.adapter_classes import Message
-from ..errors.agent_exceptions import AgentError
+from ..agent import AgentBase
+from ...adapters.adapter import AgentAdapter
+from ...schemas.adapters import Message
+from ...exceptions.agent import AgentError
 
 from ...configs.prompts import FACT_RETRIEVAL_ROLE, FACT_RETRIEVER_PROMPT
 

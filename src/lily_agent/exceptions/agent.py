@@ -1,5 +1,4 @@
 class AgentError(Exception):
-    """Base exception for all Agent related errors."""
     pass
 
 class MaxIterationsError(AgentError):

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
-from ...vectorstore.core.vector_store import VectorRetrieval
-from ...agents.events.event_classes import MemoryStore
+from ..vectorstore.vector_store import VectorRetrieval
+from ..schemas.events import MemoryStore
 
 import asyncio
 
