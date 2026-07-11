@@ -1,11 +1,14 @@
 from ..adapters.adapter import AgentAdapter
-from typing import Optional
-from abc import ABC, abstractmethod
 from .events.event_dispatcher import EventDispatcher
 from .events.agent_events import AgentEvents
+from ..schemas import User, AgentInfo
 
 import asyncio
 import logging
+
+from uuid import UUID
+from typing import Optional
+from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
 
@@ -29,20 +32,14 @@ class AgentBase(ABC):
             role: Optional[str] = None,
             prompt: Optional[str] = None,
     ) -> None:
-        
-        """ Agent Details"""
-        self.agent_id: str
-        self.name: str = name or "Lily"
-        self.key: str = key or "assistant"
-
-        
-        self.role = role if role is not None else "You are Lily, a helpful agent developed by Shree"
-
-        self.prompt = prompt if prompt is not None else "Respond accurately and effectively to user requests."
-        self.system_prompt: str = f"{self.role}\n\n{self.prompt}"
-
+        self.me: AgentInfo = AgentInfo(
+            id=UUID("6d515d56-0b48-4c51-b31e-bd98df8554da"),
+            name = name or "Lily",
+            key = key or "assistant",
+            role = role or "You are Lily, a helpful agent developed by Shree",
+            prompt = prompt or "Respond accurately and effectively to user requests."
+        )
         self.adapter: AgentAdapter = adapter
-
         self._agent_event_handler = EventDispatcher()
 
         self._agent_event_handler.preload_events({
@@ -52,9 +49,9 @@ class AgentBase(ABC):
         logger.info(
             "Initialized Agent",
             extra = {
-                "agent_name": self.name,
-                "key": self.key,
-                "role": self.role
+                "agent_name": self.me.name,
+                "key": self.me.key,
+                "role": self.me.role
             }
         )
 
@@ -85,7 +82,7 @@ class AgentBase(ABC):
 
 
     @abstractmethod
-    async def run(self, query: str, user_id: Optional[str]=None, **kwargs) -> str:
+    async def run(self, query: str, user: Optional[User]=None, **kwargs) -> str:
         """
         ### Definition
         - Asynchronous abstract method used to run user query by interacting with the LLM
