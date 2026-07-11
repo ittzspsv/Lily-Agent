@@ -1,10 +1,10 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional
 from ..vectorstore.vector_store import VectorRetrieval
 from ..schemas.events import MemoryStore
 
 import asyncio
-
+from abc import ABC, abstractmethod
+from typing import Dict, Any, List, Optional
+from uuid import UUID
 
 class MemoryBase(ABC):
     def _run_sync(self, coro):
@@ -20,9 +20,9 @@ class MemoryBase(ABC):
     @abstractmethod
     async def push(
         self,
-        text: str,
-        agent_id: str,
-        user_id: Optional[str] = None,
+        text: str, 
+        agent_id: UUID,
+        user_id: Optional[UUID | int] = None,
         metadata: Optional[dict] = {}
     ) -> MemoryStore:
         ...
@@ -30,17 +30,27 @@ class MemoryBase(ABC):
     def push_sync(
             self, 
             text: str, 
-            agent_id: str,
-            user_id: Optional[str] = None,
+            agent_id: UUID,
+            user_id: Optional[UUID | int] = None,
             metadata: Optional[dict] = {}
     ) -> MemoryStore:
         return self._run_sync(self.push(text=text, agent_id=agent_id, user_id=user_id, metadata=metadata))
 
     @abstractmethod
-    async def retrieve(self, query: str, filters: Optional[Dict[str, Any]] = None, k: int = 5) -> List[VectorRetrieval]:
+    async def retrieve(
+        self, 
+        query: str, 
+        filters: Optional[Dict[str, Any]] = None, 
+        k: int = 5
+    ) -> List[VectorRetrieval]:
         pass
 
-    def retrieve_sync(self, query: str, filters: Optional[Dict[str, Any]] = None ,k: int = 5) -> List[VectorRetrieval]:
+    def retrieve_sync(
+            self, 
+            query: str, 
+            filters: Optional[Dict[str, Any]] = None ,
+            k: int = 5
+        ) -> List[VectorRetrieval]:
         return self._run_sync(self.retrieve(query=query, filters=filters ,k=k))
 
     @abstractmethod
