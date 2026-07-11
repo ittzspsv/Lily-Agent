@@ -6,7 +6,7 @@ from ..schemas import User, AgentInfo
 import asyncio
 import logging
 
-from uuid import UUID
+from uuid import UUID, uuid4
 from typing import Optional
 from abc import ABC, abstractmethod
 
@@ -39,9 +39,14 @@ class AgentBase(ABC):
             role = role or "You are Lily, a helpful agent developed by Shree",
             prompt = prompt or "Respond accurately and effectively to user requests."
         )
+
+        self.user: User = User(
+            uuid4(),
+            "default"
+        )
+
         self.adapter: AgentAdapter = adapter
         self._agent_event_handler = EventDispatcher()
-
         self._agent_event_handler.preload_events({
             AgentEvents.ON_AGENT_TEXT_RESPONSE
         })

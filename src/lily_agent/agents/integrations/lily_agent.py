@@ -43,20 +43,19 @@ class LilyAgent(AgentBase):
     """
 
     def __init__(
-            self, 
-            adapter: AgentAdapter, 
-            memory: Optional[MemoryBase] = None,
-            tools: Optional[List[Tool]]=None, 
-            formatter: Optional[Formatter] = None, 
-            name: Optional[str] = None,
-            role: Optional[str] = None ,
-            prompt: Optional[str] = None,
-            key: Optional[str] = None,
-            max_iter: int = 3,
-            policy: Optional[AgentPolicy] = None,
-            registry: Optional[AgentRegistry] = None
+        self,
+        adapter: AgentAdapter,
+        memory: Optional[MemoryBase] = None,
+        tools: Optional[List[Tool]] = None,
+        formatter: Optional[Formatter] = None,
+        name: Optional[str] = None,
+        role: Optional[str] = None,
+        prompt: Optional[str] = None,
+        key: Optional[str] = None,
+        max_iter: int = 3,
+        policy: Optional[AgentPolicy] = None,
+        registry: Optional[AgentRegistry] = None,
     ) -> None:
-        
         super().__init__(adapter=adapter, role=role, prompt=prompt, name=name, key=key)
 
         self._agent_event_handler.preload_events({
@@ -64,30 +63,26 @@ class LilyAgent(AgentBase):
             AgentEvents.ON_TOOL_EXECUTION_STARTED,
             AgentEvents.ON_TOOL_EXECUTION_COMPLETED,
             AgentEvents.ON_TOOL_EXECUTION_FAILED,
-
             AgentEvents.ON_MEMORY_RETRIEVED,
-            AgentEvents.ON_MEMORY_STORED
+            AgentEvents.ON_MEMORY_STORED,
         })
-        
+
         self.tools: List[Tool] = tools or []
-        self.max_iter: int = max_iter
-        self.formatter = formatter if formatter is not None else BaseFormatter()
-        self.tool_executor: Optional[ToolExecutor] = ToolExecutor(
-            tools=self.tools, 
-            event_handler=self._agent_event_handler
-        ) if self.tools else None
-        self.conversation: Conversation =  Conversation(self.me.system_prompt)
+        self.formatter: Formatter = formatter if formatter is not None else BaseFormatter()
         self.memory: Optional[MemoryBase] = memory
         self.policy: Optional[AgentPolicy] = policy
         self.registry: AgentRegistry = registry or JSONRegistry()
 
-        
-        self._use_conversational_history: bool = True
-        self._use_memory: bool = False
-        self._store_memory: bool = False
+        self.tool_executor: Optional[ToolExecutor] = (
+            ToolExecutor(tools=self.tools, event_handler=self._agent_event_handler)
+            if self.tools else None
+        )
+        self.conversation: Conversation = Conversation(self.me.system_prompt)
 
-        if self.memory is not None:
-            self._use_memory = True
+        self.max_iter: int = max_iter
+        self._use_conversational_history: bool = True
+        self._use_memory: bool = self.memory is not None
+        self._store_memory: bool = False
 
         if self.policy is not None:
             self._apply_policy()
@@ -96,7 +91,7 @@ class LilyAgent(AgentBase):
             agent_key=self.me.key,
             name=self.me.name,
             role=self.me.role,
-            prompt=self.me.prompt
+            prompt=self.me.prompt,
         )
 
     def run_sync(self, query: str, user_id: Optional[str]=None, **kwargs):
@@ -146,7 +141,7 @@ class LilyAgent(AgentBase):
         if self.policy.store_memory is not None:
             self._store_memory = self.policy.store_memory
 
-    def _conversation(self, query: str) -> Conversation:
+    def _conversation(self, query: str, user: User) -> Conversation:
         """
         ### Definition
         - Builds the conversation object
@@ -163,7 +158,7 @@ class LilyAgent(AgentBase):
         else:
             conversation = Conversation(self.me.system_prompt)
 
-        conversation.add_user(content=query)
+        conversation.add_user(content=query, user=user)
         return conversation
     
     async def _inject(
@@ -201,7 +196,7 @@ class LilyAgent(AgentBase):
 
         if len(memory_retrieval) > 0:
             for retrieval in memory_retrieval:
-                conversation.add_system(content=f"[Memory] {retrieval.text}")
+                conversation.add_system(content=f"[Memory] {retrieval.text}", user=user or self.user)
 
             await self._agent_event_handler.invoke(AgentEvents.ON_MEMORY_RETRIEVED, memory_retrieval)
 
@@ -253,7 +248,7 @@ class LilyAgent(AgentBase):
         if response.content is None:
             return None
 
-        conversation.add_assistant(content=response.content)
+        conversation.add_assistant(content=response.content, user=user or self.user)
 
         await self._store(text=query, user=user)
 
@@ -295,10 +290,10 @@ class LilyAgent(AgentBase):
         await self._agent_event_handler.invoke(AgentEvents.ON_TOOL_CALL_REQUESTED)
 
         if response.raw and response.raw.get("message"):
-            conversation.add_assistant(content=response.raw.get("message"))
+            conversation.add_assistant(content=response.raw.get("message"), user=user or self.user)
 
         tool_results = await self.tool_executor.execute(response.tool_calls, **kwargs)
-        conversation.add_tool_results(tool_results)
+        conversation.add_tool_results(results=tool_results, user=user or self.user)
 
         await self._store(text=str(tool_results), user=user)
 
@@ -355,7 +350,7 @@ class LilyAgent(AgentBase):
         - **MaxIterationsError** => raises when the maximum number of iterations is reached without providing an concluding response
         """
         
-        conversation = self._conversation(query)
+        conversation = self._conversation(query=query, user=user or self.user)
 
         if self._use_memory and self.memory is not None:
             await self._inject(conversation, query, user)
@@ -364,7 +359,7 @@ class LilyAgent(AgentBase):
 
         for _ in range(self.max_iter):
             response = await self.adapter.complete(
-                conversation.get_messages(),
+                conversation.get_messages(user=user or self.user),
                 formatted_tools
             )
 
