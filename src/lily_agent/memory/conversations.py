@@ -1,4 +1,4 @@
-from ..schemas.adapters import Message
+from ..schemas.message import Message
 from typing import List
 
 class Conversation:

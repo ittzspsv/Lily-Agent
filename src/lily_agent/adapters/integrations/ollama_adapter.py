@@ -1,6 +1,6 @@
 from ..adapter import AgentAdapter
 from typing import List, Any, Dict, Optional
-from ...schemas.adapters import LLMResponse, Message, ToolCall
+from ...schemas.message import LLMResponse, Message, ToolCall
 from ...exceptions.adapter import AdapterError
 
 import httpx

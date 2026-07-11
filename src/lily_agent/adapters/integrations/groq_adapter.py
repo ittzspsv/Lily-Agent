@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional
 from ..adapter import AgentAdapter
-from lily_agent.schemas.adapters import Message, LLMResponse, ToolCall
+from lily_agent.schemas.message import Message, LLMResponse, ToolCall
 from lily_agent.exceptions.adapter import AdapterError
 
 import json

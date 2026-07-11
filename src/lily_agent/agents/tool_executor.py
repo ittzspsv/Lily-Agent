@@ -1,13 +1,13 @@
-# tool_executor.py
-
 from ..tools.base.tool_base import Tool
-from typing import List, Optional
 from ..tools.errors.tool_exceptions import ToolValidationError, ToolRuntimeError
 from ..exceptions.agent import ToolNotFoundError
-from ..schemas.adapters import Message, ToolCall
+from ..schemas import Message, ToolCall
 from .events.event_dispatcher import EventDispatcher
 from .events.agent_events import AgentEvents
 from ..schemas.events import ToolResult
+
+from typing import List, Optional
+
 
 class ToolExecutor:
     def __init__(self, tools: List[Tool], event_handler: Optional[EventDispatcher]) -> None:
@@ -21,7 +21,6 @@ class ToolExecutor:
         else:
             tools = tool
 
-        """ Building the tool registry """
         for t in tools:
             if t.name in self._tool_registry:
                 raise ValueError (f"Tool with '{t.name}' already exists")
@@ -46,7 +45,6 @@ class ToolExecutor:
             raise ValueError
 
         for tool_call in tool_calls:
-            print(f"[ToolExecutor] Calling tool: {tool_call.name}")
             if tool_call.name not in self._tool_registry:
                 raise ToolNotFoundError(tool_call.name)
             

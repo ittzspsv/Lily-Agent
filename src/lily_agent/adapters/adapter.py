@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 from typing import List, Any
 from ..exceptions.adapter import AdapterError
-from ..schemas.adapters import LLMResponse, Message
+from ..schemas.message import LLMResponse, Message
 
 import asyncio
 import httpx
