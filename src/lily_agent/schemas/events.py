@@ -1,11 +1,9 @@
 from typing import List, Any, Optional
-from pydantic import BaseModel
-
-
-class TextResponse(BaseModel):
-    content: str
+from pydantic import BaseModel, ConfigDict
 
 class ToolResult(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     id: str
     name: str
     args: dict

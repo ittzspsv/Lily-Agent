@@ -13,7 +13,6 @@ from ...registry.agent_registry import AgentRegistry
 from ...vectorstore.vector_store import VectorRetrieval
 from ...registry.integrations.json_registry import JSONRegistry
 from ...schemas.events import (
-    TextResponse,
     MemoryStore
 )
 from ...schemas import User, MessageRole, LLMResponse, AgentResponse
@@ -264,11 +263,6 @@ class LilyAgent(AgentBase):
 
         await self._store(text=query, user=user)
 
-        await self._agent_event_handler.invoke(
-            AgentEvents.ON_AGENT_TEXT_RESPONSE,
-            TextResponse(content=response.content)
-        )
-
         return response
 
     async def _handle_tool_call_response(
@@ -382,8 +376,11 @@ class LilyAgent(AgentBase):
             if response.response_type == "text":
                 result = await self._handle_text_response(response, conversation, query, user)
                 if result is not None:
-                    response = AgentResponse.model_validate(result)
-                    response.me = self.me
+                    response = AgentResponse(**result.model_dump(), me=self.me)
+                    await self._agent_event_handler.invoke(
+                        AgentEvents.ON_AGENT_TEXT_RESPONSE,
+                        response
+                    )
                     return response
 
             elif response.response_type == "tool_call":
