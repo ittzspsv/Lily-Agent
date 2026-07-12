@@ -1,6 +1,6 @@
 from ..adapter import AgentAdapter
 from typing import List, Any, Dict, Optional
-from ...schemas.message import LLMResponse, Message, ToolCall
+from ...schemas import AgentResponse, Message, ToolCall
 from ...exceptions.adapter import AdapterError
 
 import httpx
@@ -67,7 +67,7 @@ class OllamaAdapter(AgentAdapter):
 
         return payload
 
-    def _parse_response(self, response: Any) -> LLMResponse:
+    def _parse_response(self, response: Any) -> AgentResponse:
         '''
         ### Definition
         - Parses the raw api response into a structure LLMResponse
@@ -111,7 +111,7 @@ class OllamaAdapter(AgentAdapter):
                 tool_arguments: dict = function.get("arguments", {})
                 tool_calls.append(ToolCall(id=tool_call_id, name=tool_name, input=tool_arguments))
 
-            return LLMResponse(response_type="tool_call", content=content, tool_calls=tool_calls, raw=response)
+            return AgentResponse(response_type="tool_call", content=content, tool_calls=tool_calls, raw=response)
         else:
-            return LLMResponse(response_type="text", content=content, tool_calls=None, raw=response)
+            return AgentResponse(response_type="text", content=content, tool_calls=None, raw=response)
         

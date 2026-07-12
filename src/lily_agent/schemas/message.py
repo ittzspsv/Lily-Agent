@@ -2,7 +2,7 @@ from typing import Optional
 from pydantic import BaseModel
 from enum import Enum
 
-class MessageRole(Enum):
+class MessageRole(str, Enum):
     System = "system"
     User = "user"
     Assistant = "assistant"
