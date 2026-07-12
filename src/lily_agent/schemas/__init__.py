@@ -2,7 +2,7 @@ from .agents import AgentInfo, AgentPolicy
 from .users import User
 from .tool_call import ToolCall
 from .message import Message, MessageRole
-from .response import LLMResponse, AgentResponse
+from .response import LLMResponse, AgentResponse, ResponseType
 
 __all__ = [
     "AgentPolicy", 
@@ -12,5 +12,6 @@ __all__ = [
     "Message", 
     "MessageRole", 
     "LLMResponse",
-    "AgentResponse"
+    "AgentResponse",
+    "ResponseType"
 ]

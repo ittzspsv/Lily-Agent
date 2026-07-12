@@ -1,6 +1,6 @@
 from ..adapter import AgentAdapter
 from typing import List, Any, Dict, Optional
-from ...schemas import AgentResponse, Message, ToolCall
+from ...schemas import AgentResponse, Message, ToolCall, ResponseType
 from ...exceptions.adapter import AdapterError
 
 import httpx
@@ -111,7 +111,7 @@ class OllamaAdapter(AgentAdapter):
                 tool_arguments: dict = function.get("arguments", {})
                 tool_calls.append(ToolCall(id=tool_call_id, name=tool_name, input=tool_arguments))
 
-            return AgentResponse(response_type="tool_call", content=content, tool_calls=tool_calls, raw=response)
+            return AgentResponse(response_type=ResponseType.ToolCall, content=content, tool_calls=tool_calls, raw=response)
         else:
-            return AgentResponse(response_type="text", content=content, tool_calls=None, raw=response)
+            return AgentResponse(response_type=ResponseType.Text, content=content, tool_calls=None, raw=response)
         
