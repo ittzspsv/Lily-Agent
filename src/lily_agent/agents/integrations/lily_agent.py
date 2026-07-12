@@ -233,11 +233,11 @@ class LilyAgent(AgentBase):
 
     async def _handle_text_response(
         self,
-        response: AgentResponse,
+        response: LLMResponse,
         conversation: Conversation,
         query: str,
         user: Optional[User]
-    ) -> Optional[AgentResponse]:
+    ) -> Optional[LLMResponse]:
         """
         ### Definition
         - Handles a "text" response type from the adapter: records it in the conversation,
@@ -374,7 +374,7 @@ class LilyAgent(AgentBase):
         formatted_tools = self.formatter.format_many(self.tools) if self.tools else []
 
         for _ in range(self.max_iter):
-            response: AgentResponse = await self.adapter.complete(
+            response: LLMResponse = await self.adapter.complete(
                 conversation.get_messages(user=user or self.user),
                 formatted_tools
             )
@@ -382,7 +382,9 @@ class LilyAgent(AgentBase):
             if response.response_type == "text":
                 result = await self._handle_text_response(response, conversation, query, user)
                 if result is not None:
-                    return result
+                    response = AgentResponse.model_validate(result)
+                    response.me = self.me
+                    return response
 
             elif response.response_type == "tool_call":
                 await self._handle_tool_call_response(response, conversation, user, **kwargs)
