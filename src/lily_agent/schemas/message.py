@@ -6,6 +6,7 @@ class MessageRole(Enum):
     System = "system"
     User = "user"
     Assistant = "assistant"
+    ToolResult = "tool_result"
 
 class Message(BaseModel):
     role: MessageRole

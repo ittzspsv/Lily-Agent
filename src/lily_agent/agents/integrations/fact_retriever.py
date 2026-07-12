@@ -4,7 +4,7 @@ from ..agent import AgentBase
 from ...adapters.adapter import AgentAdapter
 from ...schemas.message import Message
 from ...exceptions.agent import AgentError
-from ...schemas import User
+from ...schemas import User, LLMResponse, MessageRole
 from ...configs.prompts import FACT_RETRIEVAL_ROLE, FACT_RETRIEVER_PROMPT
 
 class FactRetriever(AgentBase):
@@ -20,11 +20,11 @@ class FactRetriever(AgentBase):
         query: str,
         user: Optional[User] = None,
         **kwargs,
-    ) -> str:
+    ) -> LLMResponse:
         response = await self.adapter.complete(
             messages=[
-                Message(role="system", content=self.me.system_prompt),
-                Message(role="user", content=query),
+                Message(role=MessageRole.System, content=self.me.system_prompt),
+                Message(role=MessageRole.User, content=query),
             ],
             tools=[],
         )
@@ -32,4 +32,4 @@ class FactRetriever(AgentBase):
         if response.content is None:
             raise AgentError("Failed to generate response")
 
-        return response.content
+        return response

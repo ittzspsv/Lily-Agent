@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 from typing import List, Any
 from ..exceptions.adapter import AdapterError
-from ..schemas.message import LLMResponse, Message
+from ..schemas import AgentResponse, Message
 
 import asyncio
 import httpx
@@ -57,7 +57,7 @@ class AgentAdapter(ABC):
         self._network_client = httpx.AsyncClient(timeout=timeout)
 
 
-    def complete_sync(self, messages: List[Message], tools: List[dict]) -> LLMResponse:
+    def complete_sync(self, messages: List[Message], tools: List[dict]) -> AgentResponse:
         '''
         ### Definition
         - Main entry point for generating an response from the LLM.
@@ -84,7 +84,7 @@ class AgentAdapter(ABC):
         except Exception as e:
             raise AdapterError(f"Unexpected error occurred: {e}") from e
         
-    async def complete(self, messages: List[Message], tools: List[dict]) -> LLMResponse:
+    async def complete(self, messages: List[Message], tools: List[dict]) -> AgentResponse:
       '''
         ### Definition
         - Main asynchronous entry point for generating an response from the LLM.
@@ -183,7 +183,7 @@ class AgentAdapter(ABC):
                 raise AdapterError(f"HTTP error {response_status}: {e.response.text}") from e
 
     @abstractmethod
-    def _parse_response(self, response: Any) -> LLMResponse:
+    def _parse_response(self, response: Any) -> AgentResponse:
         '''
         ### Definition
         - Parses the raw api response into a structure LLMResponse

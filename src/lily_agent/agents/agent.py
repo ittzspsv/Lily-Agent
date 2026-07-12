@@ -1,7 +1,7 @@
 from ..adapters.adapter import AgentAdapter
 from .events.event_dispatcher import EventDispatcher
 from .events.agent_events import AgentEvents
-from ..schemas import User, AgentInfo
+from ..schemas import User, AgentInfo, LLMResponse
 
 import asyncio
 import logging
@@ -61,7 +61,7 @@ class AgentBase(ABC):
         )
 
 
-    def run_sync(self, query: str, user_id: Optional[str]=None, **kwargs):
+    def run_sync(self, query: str, user_id: Optional[str]=None, **kwargs) -> LLMResponse:
         """
         ### Definition
         - Synchronous method used to run user query by interacting with the LLM
@@ -87,7 +87,7 @@ class AgentBase(ABC):
 
 
     @abstractmethod
-    async def run(self, query: str, user: Optional[User]=None, **kwargs) -> str:
+    async def run(self, query: str, user: Optional[User]=None, **kwargs) -> LLMResponse:
         """
         ### Definition
         - Asynchronous abstract method used to run user query by interacting with the LLM

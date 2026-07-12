@@ -1,7 +1,7 @@
 from ..tools.base.tool_base import Tool
 from ..tools.errors.tool_exceptions import ToolValidationError, ToolRuntimeError
 from ..exceptions.agent import ToolNotFoundError
-from ..schemas import Message, ToolCall
+from ..schemas import Message, ToolCall, MessageRole
 from .events.event_dispatcher import EventDispatcher
 from .events.agent_events import AgentEvents
 from ..schemas.events import ToolResult
@@ -60,7 +60,7 @@ class ToolExecutor:
 
 
             results.append(Message(
-                role="tool_result",
+                role=MessageRole.ToolResult,
                 content=str(result),
                 tool_call_id=tool_call.id
             ))
@@ -137,7 +137,7 @@ class ToolExecutor:
                     ))
 
             results.append(Message(
-                role="tool_result",
+                role=MessageRole.ToolResult,
                 content=str(result),
                 tool_call_id=tool_call.id
             ))

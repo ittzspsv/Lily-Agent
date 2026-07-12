@@ -16,7 +16,7 @@ from ...schemas.events import (
     TextResponse,
     MemoryStore
 )
-from ...schemas import User
+from ...schemas import User, MessageRole, LLMResponse, AgentResponse
 
 from typing import Optional, List, Dict
 from uuid import UUID
@@ -158,7 +158,11 @@ class LilyAgent(AgentBase):
         else:
             conversation = Conversation(self.me.system_prompt)
 
-        conversation.add_user(content=query, user=user)
+        conversation.add_message(
+            content=query, 
+            user=user, 
+            role=MessageRole.User
+        )
         return conversation
     
     async def _inject(
@@ -196,7 +200,11 @@ class LilyAgent(AgentBase):
 
         if len(memory_retrieval) > 0:
             for retrieval in memory_retrieval:
-                conversation.add_system(content=f"[Memory] {retrieval.text}", user=user or self.user)
+                conversation.add_message(
+                    content=f"[Memory] {retrieval.text}", 
+                    user=user or self.user, 
+                    role=MessageRole.System
+                )
 
             await self._agent_event_handler.invoke(AgentEvents.ON_MEMORY_RETRIEVED, memory_retrieval)
 
@@ -225,11 +233,11 @@ class LilyAgent(AgentBase):
 
     async def _handle_text_response(
         self,
-        response,
+        response: AgentResponse,
         conversation: Conversation,
         query: str,
         user: Optional[User]
-    ) -> Optional[str]:
+    ) -> Optional[AgentResponse]:
         """
         ### Definition
         - Handles a "text" response type from the adapter: records it in the conversation,
@@ -248,7 +256,11 @@ class LilyAgent(AgentBase):
         if response.content is None:
             return None
 
-        conversation.add_assistant(content=response.content, user=user or self.user)
+        conversation.add_message(
+            content=response.content, 
+            user=user or self.user, 
+            role=MessageRole.Assistant
+        )
 
         await self._store(text=query, user=user)
 
@@ -257,7 +269,7 @@ class LilyAgent(AgentBase):
             TextResponse(content=response.content)
         )
 
-        return response.content
+        return response
 
     async def _handle_tool_call_response(
         self,
@@ -290,7 +302,11 @@ class LilyAgent(AgentBase):
         await self._agent_event_handler.invoke(AgentEvents.ON_TOOL_CALL_REQUESTED)
 
         if response.raw and response.raw.get("message"):
-            conversation.add_assistant(content=response.raw.get("message"), user=user or self.user)
+            conversation.add_message(
+                content=response.raw.get("message"), 
+                user=user or self.user, 
+                role=MessageRole.Assistant
+            )
 
         tool_results = await self.tool_executor.execute(response.tool_calls, **kwargs)
         conversation.add_tool_results(results=tool_results, user=user or self.user)
@@ -331,7 +347,7 @@ class LilyAgent(AgentBase):
             query: str, 
             user: Optional[User]=None,
             **kwargs
-        ) -> str:
+        ) -> AgentResponse:
         """
         ### Definition
         - Asynchronous method used to run user query by interacting with the LLM and making tool-calls whenever necessary
@@ -358,7 +374,7 @@ class LilyAgent(AgentBase):
         formatted_tools = self.formatter.format_many(self.tools) if self.tools else []
 
         for _ in range(self.max_iter):
-            response = await self.adapter.complete(
+            response: AgentResponse = await self.adapter.complete(
                 conversation.get_messages(user=user or self.user),
                 formatted_tools
             )
