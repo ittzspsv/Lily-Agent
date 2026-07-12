@@ -1,4 +1,4 @@
-from ..schemas import Message, User
+from ..schemas import Message, User, MessageRole
 from typing import Dict, List, Optional
 from uuid import UUID
 
@@ -13,14 +13,11 @@ class Conversation:
             self._messages[user.id] = [Message(role="system", content=self._system_prompt)]
         return self._messages[user.id]
 
-    def add_user(self, user: User, content: str) -> None:
-        self._get_messages(user).append(Message(role="user", content=content))
-
-    def add_assistant(self, user: User, content: str) -> None:
-        self._get_messages(user).append(Message(role="assistant", content=content))
-
-    def add_system(self, user: User, content: str) -> None:
-        self._get_messages(user).append(Message(role="system", content=content))
+    def add_message(self, user: User, content: str, role: MessageRole):
+        self._get_messages(user).append(Message(
+            role = role.value,
+            content=content
+        ))
 
     def add_tool_results(self, user: User, results: List[Message]) -> None:
         self._get_messages(user).extend(results)
