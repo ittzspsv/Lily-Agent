@@ -3,8 +3,8 @@ from uuid import UUID
 from pydantic import BaseModel
 from typing import Optional
 
-@dataclass
-class AgentInfo:
+
+class AgentInfo(BaseModel):
     id: UUID
     key: str
     name: str

@@ -1,9 +1,8 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
 from uuid import UUID
 
 from typing import Optional
 
-@dataclass
-class User:
+class User(BaseModel):
     id: UUID | int
     name: Optional[str]

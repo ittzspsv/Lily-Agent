@@ -1,21 +1,19 @@
-from dataclasses import dataclass
 from typing import List, Any, Optional
+from pydantic import BaseModel
 
-@dataclass
-class TextResponse:
+
+class TextResponse(BaseModel):
     content: str
 
-
-@dataclass
-class ToolResult:
+class ToolResult(BaseModel):
     id: str
     name: str
     args: dict
     results: Any
     exception: Optional[Exception]
 
-@dataclass
-class MemoryStore:
+
+class MemoryStore(BaseModel):
     user_id: str
     agent_id: str
     metadata: dict
