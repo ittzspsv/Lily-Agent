@@ -41,8 +41,8 @@ class AgentBase(ABC):
         )
 
         self.user: User = User(
-            uuid4(),
-            "default"
+            id=uuid4(),
+            name="default"
         )
 
         self.adapter: AgentAdapter = adapter
