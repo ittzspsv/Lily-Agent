@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional
 from ..adapter import AgentAdapter
-from lily_agent.schemas.adapters import Message, LLMResponse, ToolCall
+from lily_agent.schemas import Message, LLMResponse, ToolCall, ResponseType
 from lily_agent.exceptions.adapter import AdapterError
 
 import json
@@ -119,7 +119,7 @@ class GroqAdapter(AgentAdapter):
             '''We return an LLMResponse with the type=tool_call and all the parameters extracted'''
 
             return LLMResponse(
-                response_type="tool_call",
+                response_type=ResponseType.ToolCall,
                 content=content,
                 tool_calls=tool_calls,
                 raw=response
@@ -127,7 +127,7 @@ class GroqAdapter(AgentAdapter):
 
         '''Default Fallback finish_reason = stop'''    
         return LLMResponse(
-            response_type="text",
+            response_type=ResponseType.Text,
             content=content,
             tool_calls=None,
             raw=response

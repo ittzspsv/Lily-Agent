@@ -15,7 +15,6 @@ class AgentMemory(MemoryBase):
        - `llm` (For fact retrieval)
        - `embedder` (Embedding Model)
        - `vector_store` (For storing embeddings)
-    
     """
     def __init__(
             self, 
@@ -78,7 +77,12 @@ class AgentMemory(MemoryBase):
             facts=facts
         )
     
-    async def retrieve(self, query: str, filters: Optional[Dict[str, Any]] = None, k: int = 5) -> List[VectorRetrieval]:
+    async def retrieve(
+            self, 
+            query: str, 
+            filters: Optional[Dict[str, Any]] = None, 
+            k: int = 5
+        ) -> List[VectorRetrieval]:
         query_embedding = await self.embedder.embed(query)
 
         results: List[VectorRetrieval] = await self.vector_store.retrieve(

@@ -1,21 +1,17 @@
-from dataclasses import dataclass
 from typing import List, Any, Optional
+from pydantic import BaseModel, ConfigDict
 
-@dataclass
-class TextResponse:
-    content: str
+class ToolResult(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-
-@dataclass
-class ToolResult:
     id: str
     name: str
     args: dict
     results: Any
     exception: Optional[Exception]
 
-@dataclass
-class MemoryStore:
+
+class MemoryStore(BaseModel):
     user_id: str
     agent_id: str
     metadata: dict

@@ -1,25 +1,24 @@
 from ...adapters.adapter import AgentAdapter
 from ...tools.base.tool_base import Tool
-from ...formatters.base_formatter import BaseFormatter
+from ...formatters.integrations.base_formatter import BaseFormatter
 from ...formatters.formatter import Formatter
 from ...exceptions.agent import MaxIterationsError
 from ..tool_executor import ToolExecutor
 from ...memory.conversations import Conversation
 from ...memory.memory import MemoryBase
-from ...schemas.agent_policy import AgentPolicy
+from ...schemas import AgentPolicy
 from ..agent import AgentBase
 from ..events.agent_events import AgentEvents
 from ...registry.agent_registry import AgentRegistry
 from ...vectorstore.vector_store import VectorRetrieval
 from ...registry.integrations.json_registry import JSONRegistry
-
-
 from ...schemas.events import (
-    TextResponse,
     MemoryStore
 )
+from ...schemas import User, MessageRole, LLMResponse, AgentResponse
 
-from typing import Optional, List
+from typing import Optional, List, Dict
+from uuid import UUID
 import asyncio
 
 
@@ -32,28 +31,30 @@ class LilyAgent(AgentBase):
     formats input and output responses for the model.
 
     ### Class Attributes
-    - **tools**: `List[Tool]` => The list of tools available for an agent to perform actions/tool calls
-    - **system_prompt**: `str` => Combination of agent role and prompt that defines the agent's behavior
-    - **formatter**: `Formatter` => Responsible for formatting tool schema depending on the LLM.
-    - **adapter**: `AgentAdapter` => Interface for communicating with the underlying LLM.
-    - **messages**: `List[Message]` => Conversational history
+    - **tools**: `List[Tool]`
+        - The list of tools available for an agent to perform actions/tool calls
+    - **formatter**: `Formatter`
+        - Responsible for formatting tool schema depending on the LLM.
+    - **adapter**: `AgentAdapter`
+        - Interface for communicating with the underlying LLM.
+    - **messages**: `List[Message]`
+        - Conversational history
     """
 
     def __init__(
-            self, 
-            adapter: AgentAdapter, 
-            memory: Optional[MemoryBase] = None,
-            tools: Optional[List[Tool]]=None, 
-            formatter: Optional[Formatter] = None, 
-            role: Optional[str] = None ,
-            prompt: Optional[str] = None, 
-            name: Optional[str] = None,
-            key: Optional[str] = None,
-            max_iter: int = 3,
-            policy: Optional[AgentPolicy] = None,
-            registry: Optional[AgentRegistry] = None
+        self,
+        adapter: AgentAdapter,
+        memory: Optional[MemoryBase] = None,
+        tools: Optional[List[Tool]] = None,
+        formatter: Optional[Formatter] = None,
+        name: Optional[str] = None,
+        role: Optional[str] = None,
+        prompt: Optional[str] = None,
+        key: Optional[str] = None,
+        max_iter: int = 3,
+        policy: Optional[AgentPolicy] = None,
+        registry: Optional[AgentRegistry] = None,
     ) -> None:
-        
         super().__init__(adapter=adapter, role=role, prompt=prompt, name=name, key=key)
 
         self._agent_event_handler.preload_events({
@@ -61,40 +62,39 @@ class LilyAgent(AgentBase):
             AgentEvents.ON_TOOL_EXECUTION_STARTED,
             AgentEvents.ON_TOOL_EXECUTION_COMPLETED,
             AgentEvents.ON_TOOL_EXECUTION_FAILED,
-
             AgentEvents.ON_MEMORY_RETRIEVED,
-            AgentEvents.ON_MEMORY_STORED
+            AgentEvents.ON_MEMORY_STORED,
         })
-        
+
         self.tools: List[Tool] = tools or []
-        self.max_iter: int = max_iter
-        self.formatter = formatter if formatter is not None else BaseFormatter()
-        self.tool_executor: Optional[ToolExecutor] = ToolExecutor(tools=self.tools, event_handler=self._agent_event_handler) if self.tools else None
-        self.conversation: Conversation =  Conversation(self.system_prompt)
+        self.formatter: Formatter = formatter if formatter is not None else BaseFormatter()
         self.memory: Optional[MemoryBase] = memory
         self.policy: Optional[AgentPolicy] = policy
         self.registry: AgentRegistry = registry or JSONRegistry()
 
-        
-        self._use_conversational_history: bool = True
-        self._use_memory: bool = False
-        self._store_memory: bool = False
+        self.tool_executor: Optional[ToolExecutor] = (
+            ToolExecutor(tools=self.tools, event_handler=self._agent_event_handler)
+            if self.tools else None
+        )
+        self.conversation: Conversation = Conversation(self.me.system_prompt)
 
-        if self.memory is not None:
-            self._use_memory = True
+        self.max_iter: int = max_iter
+        self._use_conversational_history: bool = True
+        self._use_memory: bool = self.memory is not None
+        self._store_memory: bool = False
 
         if self.policy is not None:
             self._apply_policy()
 
         self.agent_id = self.registry.register(
-            agent_key=self.key,
-            name=self.name,
-            role=self.role,
-            prompt=self.prompt
+            agent_key=self.me.key,
+            name=self.me.name,
+            role=self.me.role,
+            prompt=self.me.prompt,
         )
 
     def run_sync(self, query: str, user_id: Optional[str]=None, **kwargs):
-        '''
+        """
         ### Definition
         - Method used to run user query by interacting with the LLM and making tool-calls whenever necessary
         - This method mainly focuses on driving the event loop of an agent.
@@ -103,14 +103,15 @@ class LilyAgent(AgentBase):
           - Event Loop continues until an response type is produced without an tool call or Maximum iterations reached.
 
         ### Arguments
-        query: `str` =>  The user input that should be processed by the agent.
+        query: `str`
+            - The user input that should be processed by the agent.
 
         ### Returns
         - Concluding response generated by the agent before/after an reasoning.
 
         ### Raises
         - **MaxIterationsError** => raises when the maximum number of iterations is reached without providing an concluding response
-        '''
+        """
         try:
             asyncio.get_running_loop()
         except RuntimeError:
@@ -122,20 +123,189 @@ class LilyAgent(AgentBase):
             )
 
     def _apply_policy(self) -> None:
-        if self.policy is not None:
-            if self.policy.use_memory is not None:
-                self._use_memory = self.policy.use_memory
-            
-            if self.policy.use_conversational_history is not None:
-                self._use_conversational_history = self.policy.use_conversational_history
+        if self.policy is None:
+            return
 
-            if self.policy.use_tools is not None and not self.policy.use_tools:
-                self.tools = []
-                self._tool_registry = {}
-                self.tool_executor = None
+        if self.policy.use_memory is not None:
+            self._use_memory = self.policy.use_memory
 
-            if self.policy.store_memory is not None:
-                self._store_memory = self.policy.store_memory
+        if self.policy.use_conversational_history is not None:
+            self._use_conversational_history = self.policy.use_conversational_history
+
+        if self.policy.use_tools is False:
+            self.tools = []
+            self._tool_registry = {}
+            self.tool_executor = None
+
+        if self.policy.store_memory is not None:
+            self._store_memory = self.policy.store_memory
+
+    def _conversation(self, query: str, user: User) -> Conversation:
+        """
+        ### Definition
+        - Builds the conversation object
+
+        ### Arguments
+        query: `str`
+            - The user input to append to the conversation.
+
+        ### Returns
+        - The `Conversation` that can be sent to the adapter.
+        """
+        if self._use_conversational_history:
+            conversation = self.conversation
+        else:
+            conversation = Conversation(self.me.system_prompt)
+
+        conversation.add_message(
+            content=query, 
+            user=user, 
+            role=MessageRole.User
+        )
+        return conversation
+    
+    async def _inject(
+        self, 
+        conversation: Conversation,
+        query: str,
+        user: Optional[User]
+    ) -> None:
+        """
+        ### Definition
+        - Retrieves relevant memory entries for the current query and injects them
+        into the conversation as system messages. Emits `ON_MEMORY_RETRIEVED` if any are found.
+
+        ### Arguments
+        conversation: `Conversation` => The conversation to inject retrieved memory into.
+        query: `str` => The user input used as the retrieval query.
+        user: `Optional[User]` => The user scoping the memory filters, if any.
+
+        ### Returns
+        - None. Mutates `conversation` in place.
+        """
+        filters: Dict[str, UUID | int] = {"agent_id": self.me.id}
+
+        if user is not None:
+            filters["user_id"] = user.id
+
+        if self.memory is None:
+            return
+
+        memory_retrieval: List[VectorRetrieval] = await self.memory.retrieve(
+            query=query,
+            filters=filters,
+            k=5
+        )
+
+        if len(memory_retrieval) > 0:
+            for retrieval in memory_retrieval:
+                conversation.add_message(
+                    content=f"[Memory] {retrieval.text}", 
+                    user=user or self.user, 
+                    role=MessageRole.System
+                )
+
+            await self._agent_event_handler.invoke(AgentEvents.ON_MEMORY_RETRIEVED, memory_retrieval)
+
+    async def _store(self, text: str, user: Optional[User]) -> None:
+        """
+        ### Definition
+        - Pushes a single entry into memory storage and emits `ON_MEMORY_STORED`.
+        No-op if memory storage isn't enabled/configured.
+
+        ### Arguments
+        text: `str` => The text content to persist to memory.
+        user: `Optional[User]` => The user to associate with the stored entry, if any.
+
+        ### Returns
+        - None.
+        """
+        if not (self._store_memory and self.memory is not None):
+            return
+
+        memory_store: MemoryStore = await self.memory.push(
+            text=text,
+            agent_id=self.me.id,
+            user_id=user.id if user else None
+        )
+        await self._agent_event_handler.invoke(AgentEvents.ON_MEMORY_STORED, memory_store)
+
+    async def _handle_text_response(
+        self,
+        response: LLMResponse,
+        conversation: Conversation,
+        query: str,
+        user: Optional[User]
+    ) -> Optional[LLMResponse]:
+        """
+        ### Definition
+        - Handles a "text" response type from the adapter: records it in the conversation,
+        stores memory, emits the text-response event, and returns the final answer.
+
+        ### Arguments
+        response => The adapter response with `response_type == "text"`.
+        conversation: `Conversation` => The current conversation, updated with the assistant's reply.
+        query: `str` => The original user input (stored to memory alongside this response).
+        user: `Optional[User]` => The user associated with this run, if any.
+
+        ### Returns
+        - The response content as `str` if `response.content` is present, otherwise `None`
+        (signaling the caller to keep iterating).
+        """
+        if response.content is None:
+            return None
+
+        conversation.add_message(
+            content=response.content, 
+            user=user or self.user, 
+            role=MessageRole.Assistant
+        )
+
+        await self._store(text=query, user=user)
+
+        return response
+
+    async def _handle_tool_call_response(
+        self,
+        response,
+        conversation: Conversation,
+        user: Optional[User],
+        **kwargs
+    ) -> None:
+        """
+        ### Definition
+        - Handles a "tool_call" response type from the adapter: executes the requested tools,
+        appends results to the conversation, and stores the results in memory.
+
+        ### Arguments
+        response => The adapter response with `response_type == "tool_call"`.
+        conversation: `Conversation` => The current conversation, updated with the assistant's
+            tool-call message (if any) and the tool results.
+        user: `Optional[User]` => The user associated with this run, if any.
+        **kwargs => Forwarded to `self.tool_executor.execute`.
+
+        ### Returns
+        - None. Mutates `conversation` in place.
+
+        ### Raises
+        - **RuntimeError** => raised if a tool call is requested but no `tool_executor` is configured.
+        """
+        if not self.tool_executor:
+            raise RuntimeError("Tool call was requested even though Agent has no tools defined.")
+
+        await self._agent_event_handler.invoke(AgentEvents.ON_TOOL_CALL_REQUESTED)
+
+        if response.raw and response.raw.get("message"):
+            conversation.add_message(
+                content=response.raw.get("message"), 
+                user=user or self.user, 
+                role=MessageRole.Assistant
+            )
+
+        tool_results = await self.tool_executor.execute(response.tool_calls, **kwargs)
+        conversation.add_tool_results(results=tool_results, user=user or self.user)
+
+        await self._store(text=str(tool_results), user=user)
 
     def event(self, func=None):
         def decorator(fn):
@@ -149,15 +319,18 @@ class LilyAgent(AgentBase):
 
     def register_tool(self, tools: Tool | List[Tool]) -> None:
         if isinstance(tools, Tool):
-                self.tools.append(tools)    
-        else:
-            self.tools.extend(tools)
+            tools = [tools]
 
-        if self.tool_executor is not None:
-            self.tool_executor.register(tool=tools)
+        self.tools.extend(tools)
+
+        if self.tool_executor is None:
+            self.tool_executor = ToolExecutor(
+                tools=self.tools,
+                event_handler=self._agent_event_handler,
+            )
         else:
-            self.tool_executor = ToolExecutor(tools=self.tools, event_handler=self._agent_event_handler)
-    
+            self.tool_executor.register(tool=tools)
+
     def clear_tools(self) -> None:
         if self.tool_executor is not None:
             self.tool_executor.clear()
@@ -166,9 +339,9 @@ class LilyAgent(AgentBase):
     async def run(
             self, 
             query: str, 
-            user_id: Optional[str]=None,
+            user: Optional[User]=None,
             **kwargs
-        ) -> str:
+        ) -> AgentResponse:
         """
         ### Definition
         - Asynchronous method used to run user query by interacting with the LLM and making tool-calls whenever necessary
@@ -186,89 +359,32 @@ class LilyAgent(AgentBase):
         ### Raises
         - **MaxIterationsError** => raises when the maximum number of iterations is reached without providing an concluding response
         """
+        
+        conversation = self._conversation(query=query, user=user or self.user)
 
+        if self._use_memory and self.memory is not None:
+            await self._inject(conversation, query, user)
 
         formatted_tools = self.formatter.format_many(self.tools) if self.tools else []
-        
-        if self._use_conversational_history:
-            conversation = self.conversation
-        else:
-            conversation = Conversation(self.system_prompt)
-
-        conversation.add_user(content=query)
-
-
-        """ Memory Retrieval """
-        if self._use_memory and self.memory is not None:
-            """ Create Filters """
-            filters = {"agent_id": self.agent_id}
-
-            if user_id is not None:
-                filters["user_id"] = user_id
-
-
-            memory_retrieval: List[VectorRetrieval] = await self.memory.retrieve(
-                query=query,
-                filters=filters,
-                k=5
-            )
-
-            if len(memory_retrieval) > 0:
-                """ Only retrieve memory if persistent memory module exists """
-                for retrieval in memory_retrieval:
-                    conversation.add_system(
-                        content=f"[Memory] {retrieval.text}"
-                    )
-
-                await self._agent_event_handler.invoke(AgentEvents.ON_MEMORY_RETRIEVED, memory_retrieval)
 
         for _ in range(self.max_iter):
-            response = await self.adapter.complete(
-            conversation.get_messages(),
-            formatted_tools
-        )
-                
+            response: LLMResponse = await self.adapter.complete(
+                conversation.get_messages(user=user or self.user),
+                formatted_tools
+            )
+
             if response.response_type == "text":
-                if response.content is not None:
+                result = await self._handle_text_response(response, conversation, query, user)
+                if result is not None:
+                    response = AgentResponse(**result.model_dump(), me=self.me)
+                    await self._agent_event_handler.invoke(
+                        AgentEvents.ON_AGENT_TEXT_RESPONSE,
+                        response
+                    )
+                    return response
 
-                    conversation.add_assistant(content=response.content)
-
-                    """ Store to persistent memory if we have an persistent memory defined """
-                    if self._store_memory and self.memory is not None:
-                        memory_store: MemoryStore = await self.memory.push(
-                            text=query,
-                            agent_id=self.agent_id,
-                            user_id=user_id
-                        )
-                        await self._agent_event_handler.invoke(AgentEvents.ON_MEMORY_STORED, memory_store)
-
-                    await self._agent_event_handler.invoke(AgentEvents.ON_AGENT_TEXT_RESPONSE, TextResponse(content=response.content))
-
-                    return response.content
-                
             elif response.response_type == "tool_call":
-                if not self.tool_executor:
-                    raise RuntimeError("Tool call was requested even though Agent has no tools defined.")
-                
-                await self._agent_event_handler.invoke(AgentEvents.ON_TOOL_CALL_REQUESTED)
-                                
-                if response.raw and response.raw.get("message"):
-                    conversation.add_assistant(content=response.raw.get("message"))
-
-                tool_results = await self.tool_executor.execute(response.tool_calls, **kwargs)
-
-                conversation.add_tool_results(tool_results)
-
-                if self._store_memory and self.memory is not None:
-                        memory_store: MemoryStore = await self.memory.push(
-                            text=str(tool_results),
-                            agent_id=self.agent_id,
-                            user_id=user_id
-                        )
-
-                        await self._agent_event_handler.invoke(AgentEvents.ON_MEMORY_STORED, memory_store)
-
-                
+                await self._handle_tool_call_response(response, conversation, user, **kwargs)
                 continue
 
         raise MaxIterationsError(self.max_iter)

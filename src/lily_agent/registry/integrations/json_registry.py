@@ -16,22 +16,23 @@ class JSONRegistry(AgentRegistry):
         self._load()
 
     def _load(self) -> None:
-        """Load JSON file into memory cache"""
+        if self.path is None:
+            return
 
-        if self.path is not None:
-            if not os.path.exists(self.path):
-                os.makedirs(os.path.dirname(self.path), exist_ok=True)
-                with open(self.path, "w") as f:
-                    json.dump({}, f)
+        if not os.path.exists(self.path):
+            os.makedirs(os.path.dirname(self.path), exist_ok=True)
+            with open(self.path, "w") as f:
+                json.dump({}, f)
 
-            with open(self.path, "r") as f:
-                self.cache = json.load(f)
+        with open(self.path, "r") as f:
+            self.cache = json.load(f)
 
     def _save(self) -> None:
-        """ Save JSON to the path """
-        if self.path is not None:
-            with open(self.path, "w") as f:
-                json.dump(self.cache, f, indent=4)
+        if self.path is None:
+            return
+
+        with open(self.path, "w") as f:
+            json.dump(self.cache, f, indent=4)
 
 
     def register(self, agent_key: str, name: str, role: str, prompt: str) -> str:

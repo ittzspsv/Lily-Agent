@@ -1,4 +1,4 @@
 from .formatter import Formatter
-from .base_formatter import BaseFormatter
+from .integrations.base_formatter import BaseFormatter
 
 __all__ = ["Formatter", "BaseFormatter"]

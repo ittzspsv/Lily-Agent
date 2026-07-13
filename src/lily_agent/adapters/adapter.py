@@ -4,13 +4,13 @@ from abc import ABC, abstractmethod
 from typing import Optional
 from typing import List, Any
 from ..exceptions.adapter import AdapterError
-from ..schemas.adapters import LLMResponse, Message
+from ..schemas import LLMResponse, Message
 
 import asyncio
 import httpx
 
 class AgentAdapter(ABC):
-    '''
+    """
     ### Definition
     -  Abstract base class that defines a standard way of interacting with different language model
     providers such as OLLAMA, Open AI Etc...
@@ -30,7 +30,7 @@ class AgentAdapter(ABC):
       - Auth key for communicating with the api
     - ****kwargs****
       - Additional configurations
-    '''
+    """
     def __init__(
             self, 
             model: str, 
@@ -85,7 +85,7 @@ class AgentAdapter(ABC):
             raise AdapterError(f"Unexpected error occurred: {e}") from e
         
     async def complete(self, messages: List[Message], tools: List[dict]) -> LLMResponse:
-      '''
+      """
         ### Definition
         - Main asynchronous entry point for generating an response from the LLM.
         - This pattern is followed for most of the AI LLM.  so it's already implemented.
@@ -99,7 +99,7 @@ class AgentAdapter(ABC):
         ### Returns
         `LLMResponse`
           - Structured LLM response,
-        '''
+      """
       try:
           request = self._build_request(messages, tools)
           response = await self._call(request)
@@ -113,7 +113,7 @@ class AgentAdapter(ABC):
 
     @abstractmethod
     def _build_request(self, messages: List[Message], tools: List[dict]) -> dict:
-        '''
+        """
         ### Definition
         - Builds dynamic requests payload for the LLM to understand. 
         ### Parameters
@@ -122,11 +122,11 @@ class AgentAdapter(ABC):
 
         ### Returns
         - `dict` => a response representing the request body
-        '''
+        """
         raise NotImplementedError
 
     def _call_sync(self, request: dict) -> Any:
-        '''
+        """
         ### Definition
         - Method used to send an POST request to the API's Endpoint and returns the json response
         ### Parameters
@@ -142,10 +142,10 @@ class AgentAdapter(ABC):
             return asyncio.run(self._call(request))
         else:
             raise RuntimeError("Cannot call synchronous method inside an running loop.  Consider using `_call` instead")
-
+        """
 
     async def _call(self, request: dict) -> Any:
-        '''
+        """
         ### Definition
         - Method used to send an asynchronous POST request to the API's Endpoint and returns the json response
         ### Parameters
@@ -154,7 +154,7 @@ class AgentAdapter(ABC):
         - `Any`=>  Response from the api (Typically JSON)
         ### Raises
         - Handling all sorts of errors raised during the exception.
-        '''
+        """
         try:
           response = await self._network_client.post(
               self.endpoint,
@@ -184,7 +184,7 @@ class AgentAdapter(ABC):
 
     @abstractmethod
     def _parse_response(self, response: Any) -> LLMResponse:
-        '''
+        """
         ### Definition
         - Parses the raw api response into a structure LLMResponse
         ### LLMResponse
@@ -202,7 +202,7 @@ class AgentAdapter(ABC):
           - List of tool calls requested by the LLM
         - raw: `Any`
           - Unprocessed response from the LLM
-        '''
+        """
         raise NotImplementedError
 
     async def close(self):

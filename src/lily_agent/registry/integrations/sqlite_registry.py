@@ -12,10 +12,8 @@ class SQLiteRegistry(AgentRegistry):
 
         super().__init__(self.path)
 
-        """ Create a database connection """
         self.db: sqlite3.Connection = sqlite3.connect(self.path)
 
-        """ Default Schema Initialization """
         self.db.execute("""
             CREATE TABLE IF NOT EXISTS agent_registry (
                 agent_key TEXT PRIMARY KEY,       
@@ -31,14 +29,12 @@ class SQLiteRegistry(AgentRegistry):
         self.db.commit()
 
     def register(self, agent_key: str, name: str, role: str, prompt: str) -> str:
-        """ Check if role exists already """
         cursor = self.db.execute("""SELECT agent_id FROM agent_registry WHERE agent_key = ?""", (agent_key,))
         row = cursor.fetchone()
 
         if row:
             agent_id = row[0]
 
-            """Update Existing Agent"""
             self.db.execute("""
                 UPDATE agent_registry
                 SET 

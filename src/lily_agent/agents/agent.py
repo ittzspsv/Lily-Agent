@@ -1,11 +1,14 @@
 from ..adapters.adapter import AgentAdapter
-from typing import Optional
-from abc import ABC, abstractmethod
 from .events.event_dispatcher import EventDispatcher
 from .events.agent_events import AgentEvents
+from ..schemas import User, AgentInfo, LLMResponse
 
 import asyncio
 import logging
+
+from uuid import UUID, uuid4
+from typing import Optional
+from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
 
@@ -29,22 +32,21 @@ class AgentBase(ABC):
             role: Optional[str] = None,
             prompt: Optional[str] = None,
     ) -> None:
-        
-        """ Agent Details"""
-        self.agent_id: str
-        self.name: str = name or "Lily"
-        self.key: str = key or "assistant"
+        self.me: AgentInfo = AgentInfo(
+            id=UUID("6d515d56-0b48-4c51-b31e-bd98df8554da"),
+            name = name or "Lily",
+            key = key or "assistant",
+            role = role or "You are Lily, a helpful agent developed by Shree",
+            prompt = prompt or "Respond accurately and effectively to user requests."
+        )
 
-        
-        self.role = role if role is not None else "You are Lily, a helpful agent developed by Shree"
-
-        self.prompt = prompt if prompt is not None else "Respond accurately and effectively to user requests."
-        self.system_prompt: str = f"{self.role}\n\n{self.prompt}"
+        self.user: User = User(
+            id=uuid4(),
+            name="default"
+        )
 
         self.adapter: AgentAdapter = adapter
-
         self._agent_event_handler = EventDispatcher()
-
         self._agent_event_handler.preload_events({
             AgentEvents.ON_AGENT_TEXT_RESPONSE
         })
@@ -52,14 +54,14 @@ class AgentBase(ABC):
         logger.info(
             "Initialized Agent",
             extra = {
-                "agent_name": self.name,
-                "key": self.key,
-                "role": self.role
+                "agent_name": self.me.name,
+                "key": self.me.key,
+                "role": self.me.role
             }
         )
 
 
-    def run_sync(self, query: str, user_id: Optional[str]=None, **kwargs):
+    def run_sync(self, query: str, user_id: Optional[str]=None, **kwargs) -> LLMResponse:
         """
         ### Definition
         - Synchronous method used to run user query by interacting with the LLM
@@ -85,7 +87,7 @@ class AgentBase(ABC):
 
 
     @abstractmethod
-    async def run(self, query: str, user_id: Optional[str]=None, **kwargs) -> str:
+    async def run(self, query: str, user: Optional[User]=None, **kwargs) -> LLMResponse:
         """
         ### Definition
         - Asynchronous abstract method used to run user query by interacting with the LLM
