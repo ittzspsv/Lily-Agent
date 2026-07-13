@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional
-from lily_agent.adapters.core import AgentAdapter
-from lily_agent.schemas.adapters import Message, LLMResponse, ToolCall
+from lily_agent.adapters import AgentAdapter
+from lily_agent.schemas import Message, LLMResponse, ToolCall, ResponseType
 from lily_agent.exceptions.adapter import AdapterError
 
 import json
@@ -15,8 +15,8 @@ class GroqAdapter(AgentAdapter):
             **kwargs
         ) -> None:
 
-        base_endpoint = base_endpoint or "https://api.groq.com/openai" # Base Endpoint.
-        path = path or "/v1/chat/completions"  # Chat completion route
+        base_endpoint = base_endpoint or "https://api.groq.com/openai" 
+        path = path or "/v1/chat/completions" 
 
         super().__init__(model, base_endpoint, path ,api_key, timeout ,**kwargs)
 
@@ -82,7 +82,8 @@ class GroqAdapter(AgentAdapter):
         """ We will retrive the tool_calls that the LLM returned in the response """
         raw_tool_calls = message.get("tool_calls")
 
-        if raw_tool_calls: # If there is a tool_call requested by the LLM
+        # If there is a tool_call requested by the LLM
+        if raw_tool_calls: 
             """ We iterate through the tool call to get expected parameters to build ToolCall """
             for tool_call in raw_tool_calls:
                 function: Optional[Dict] = tool_call.get("function")
@@ -112,7 +113,7 @@ class GroqAdapter(AgentAdapter):
             """ We return an LLMResponse with the type=tool_call and all the parameters extracted """
 
             return LLMResponse(
-                response_type="tool_call",
+                response_type=ResponseType.ToolCall,
                 content=content,
                 tool_calls=tool_calls,
                 raw=response
@@ -120,7 +121,7 @@ class GroqAdapter(AgentAdapter):
 
         """ Default Fallback finish_reason = stop """ 
         return LLMResponse(
-            response_type="text",
+            response_type=ResponseType.Text,
             content=content,
             tool_calls=None,
             raw=response

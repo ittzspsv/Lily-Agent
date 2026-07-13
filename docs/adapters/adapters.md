@@ -1,31 +1,36 @@
 # Agent Adapters
+
 ### Basic Introduction
+
 - Adapter is a layer which is responsible for connecting your agent to a Large language model as a provider.
 
 ### Purpose
+
 - Each LLM providers (cloud or local) expose their api in different format and protocols.
 - The **adapter** acts as a central translator allowing to interact with any model through a consistent interface.
 
 ### Structure
+
 ```python
 class AgentAdapter(ABC):
 
     '''Public API (Don't override)'''
 
     async def complete(self, messages: List[Message], tools: List[dict], think: bool = False) -> LLMResponse:
-    
+
     def complete_sync(self, messages: List[Message], tools: List[dict], think: bool=False) -> LLMResponse:
-    
-    
+
+
     '''Implementation Required'''
     def _build_request(self, messages: List[Message], tools: List[dict], think: bool) -> dict:
 
     async def _call(self, request: dict) -> Any:
 
-    def _parse_response(self, response: Any) -> LLMResponse:    
+    def _parse_response(self, response: Any) -> LLMResponse:
 ```
 
 ### Adapter Flow
+
 ```mermaid
 graph TD
     A["Messages + Tools (User input + tool schema)"] --> B["Build Request (Convert to API format)"]
@@ -36,52 +41,66 @@ graph TD
 ```
 
 ### Built-in Adapters
+
 - Ollama Adapter
 
 ## Creating a Custom Adapter
+
 ### Introduction
+
 - In this comprehensive guide, let's learn on how to create our own groq-api adapter from scratch.
 
 ### Aim
+
 #### To build an adapter such that
+
 1. We construct build payload method that the API expects us.
 2. We construct a parse response method that this framework expects.
 
 ### 1. Creating the base class
+
 - Let's create a new class that inherits from **AgentAdapter**
 
 ```python
-from lily_agent.adapters.core import AgentAdapter
+from lily_agent.adapters import AgentAdapter
 
 class GroqAdapter(AgentAdapter):
     pass
 ```
 
 ### 2. Understanding the Endpoint
+
 - Provides an endpoint similar to **OpenAI-compatible Chat completion**. It follows the same request & response structure used by **OpenAI**
 - The Groq API endpoint is
+
 ```bash
 https://api.groq.com/openai/v1/chat/completions
 ```
+
 This part is the base_endpoint url
+
 ```bash
 https://api.groq.com/openai
 ```
+
 This part is the path url
+
 ```bash
 v1/chat/completions
 ```
 
 ### 3. Setting up the constructor
+
 - We will set up
-    - The default endpoint of Groq
-    - Creating an httpx network client
+  - The default endpoint of Groq
+  - Creating an httpx network client
+
 ```python
 def __init__(
-    self, model: str, 
+    self, model: str,
     base_endpoint: str | None = None,
-    path: str | None = None, 
-    api_key: str | None = None,  
+    path: str | None = None,
+    api_key: str | None = None,
     timeout: float = 300.0,
     **kwargs
 ) -> None:
@@ -93,48 +112,52 @@ def __init__(
 ```
 
 ### 4. Understanding the request payload
+
 - The type of request payload that groq expects from us is
-**Without any tools defined**
+  **Without any tools defined**
+
 ```json
 {
   "model": "llm-model-name",
   "messages": [
-    {"role": "system", "content": "You are a helpful assistant"},
-    {"role": "user", "content": "Hello!"}
+    { "role": "system", "content": "You are a helpful assistant" },
+    { "role": "user", "content": "Hello!" }
   ]
 }
 ```
+
 **With tools defined**
+
 ```json
 {
   "model": "llm-model-name",
-  "messages": [
-    {"role": "user", "content": "What's the weather today?"}
-  ],
+  "messages": [{ "role": "user", "content": "What's the weather today?" }],
   "tools": [],
   "tool_choice": "auto"
 }
 ```
 
-### 5. Inheriting the _build_request
-- Override the _build_request method to start building payloads for the Groq API
+### 5. Inheriting the \_build_request
+
+- Override the \_build_request method to start building payloads for the Groq API
 - This payload takes in list of messages and list of tools (if passed) and converts into API-Compatible format.
-> [!WARNING]
-> Groq does not support a native "thinking" parameter It instead supports temperature parameter.
+  > [!WARNING]
+  > Groq does not support a native "thinking" parameter It instead supports temperature parameter.
+
 ```python
 
 from typing import Dict, Any, List, Optional
 import json
 
 def _build_request(self, messages: List[Message], tools: List[dict], think: bool) -> dict:
-    '''Start by creating a list of messages''' 
+    '''Start by creating a list of messages'''
     messages_list: List[dict] = []
 
     '''Iterate through all the messages one by one'''
     for message in messages:
         '''Get the content of the message'''
         message_content = message.content
-        
+
 
         '''If message content is actually a tool call result then let's convert it to json'''
         if isinstance(message_content, (dict, list)):
@@ -144,7 +167,7 @@ def _build_request(self, messages: List[Message], tools: List[dict], think: bool
         '''Let's create a new dictionary per message'''
         messages_mapped: Dict[str, Any] = {
             "content": message_content
-        } 
+        }
 
         '''If the message contains a role which is a tool_result, then we set the map role => tool.  Else we set the default role that we got from the agent.'''
         if message.role == "tool_result":
@@ -153,7 +176,7 @@ def _build_request(self, messages: List[Message], tools: List[dict], think: bool
                 messages_mapped["tool_call_id"] = message.tool_call_id
         else:
             messages_mapped["role"] = message.role
-                
+
         messages_list.append(messages_mapped)
 
     '''Let's finalise the payload and return it.'''
@@ -175,7 +198,9 @@ def _build_request(self, messages: List[Message], tools: List[dict], think: bool
 ```
 
 ### Example response output from the Groq Api
+
 - Normal text response (identified by finish_reason: stop)
+
 ```json
 {
   "id": "chatcmpl-f51b2cd2-bef7-417e-964e-a08f0b513c22",
@@ -208,6 +233,7 @@ def _build_request(self, messages: List[Message], tools: List[dict], think: bool
 ```
 
 - Tool Call Response (identified by finish_reason: tool_calls)
+
 ```json
 {
   "id": "chatcmpl-f51b2cd2-bef7-417e-964e-a08f0b513c22",
@@ -237,8 +263,8 @@ def _build_request(self, messages: List[Message], tools: List[dict], think: bool
 }
 ```
 
-
 ### 6. Understanding the response that Lily expects
+
 - Lily agent framework expects an **LLMResponse** as the response output.
 - A quick overview of what **LLMResponse** Contains
   - **response_type** (can be either text or tool_call)
@@ -246,12 +272,13 @@ def _build_request(self, messages: List[Message], tools: List[dict], think: bool
   - **tool_calls** (any tool calls requests generated by the model)
   - **raw** (raw response directly passed from the api)
 
-### 7. Inheriting the _parse_response method.
-- Let's start constructing the _parse_response method.
+### 7. Inheriting the \_parse_response method.
+
+- Let's start constructing the \_parse_response method.
 
 ```python
-from lily_agent.adapters.core.adapter_classes import LLMResponse, ToolCall
-from lily_agent.adapters.core.adapter_exceptions import AdapterError
+from lily_agent.schemas import Message, LLMResponse, ToolCall, ResponseType
+from lily_agent.adapters.adapter_exceptions import AdapterError
 import json
 
 def _parse_response(self, response: Any) -> LLMResponse:
@@ -282,7 +309,7 @@ def _parse_response(self, response: Any) -> LLMResponse:
 
             tool_call_id: str = tool_call.get("id") # ID Generated by the LLM
             '''Getting the function name from the dictionary'''
-            tool_name: Optional[str] = function.get("name") 
+            tool_name: Optional[str] = function.get("name")
 
             if tool_name is None:
                 raise AdapterError("Tool call missing 'name'")
@@ -303,15 +330,15 @@ def _parse_response(self, response: Any) -> LLMResponse:
         '''We return an LLMResponse with the type=tool_call and all the parameters extracted'''
 
         return LLMResponse(
-            response_type="tool_call",
+            response_type=ResponseType.ToolCall,
             content=content,
             tool_calls=tool_calls,
             raw=response
         )
 
-    '''Default Fallback finish_reason = stop'''    
+    '''Default Fallback finish_reason = stop'''
     return LLMResponse(
-        response_type="text",
+        response_type=ResponseType.Text,
         content=content,
         tool_calls=None,
         raw=response
@@ -319,4 +346,5 @@ def _parse_response(self, response: Any) -> LLMResponse:
 ```
 
 ### 8. Final Implementation.
+
 - Here is the [final code implementation](../../examples/adapters/groq_adapter.py) that you can refer.
