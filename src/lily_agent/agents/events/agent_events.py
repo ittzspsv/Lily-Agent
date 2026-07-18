@@ -6,6 +6,10 @@ class AgentEvents:
     ON_TOOL_EXECUTION_COMPLETED: Final = "on_tool_execution_completed"
     ON_TOOL_EXECUTION_FAILED: Final = "on_tool_execution_failed"
 
+    ON_TOOL_LOAD: Final = "on_tool_load"
+    ON_TOOL_UNLOAD: Final = "on_tool_unload"
+
+
     ON_AGENT_TEXT_RESPONSE: Final = "on_agent_text_response"
 
     ON_MEMORY_RETRIEVED: Final = "on_memory_retrieved"

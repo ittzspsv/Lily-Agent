@@ -6,13 +6,15 @@ from .events.event_dispatcher import EventDispatcher
 from .events.agent_events import AgentEvents
 from ..schemas.events import ToolResult
 
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from ..agents import AgentBase
 
 
 class ToolExecutor:
-    def __init__(self, tools: List[Tool], event_handler: Optional[EventDispatcher]) -> None:
+    def __init__(self, tools: List[Tool], event_handler: EventDispatcher) -> None:
         self._tool_registry = {tool.name: tool for tool in tools}
-        self._event_handler: Optional[EventDispatcher] = event_handler
+        self._event_handler: EventDispatcher = event_handler
 
     def register(self, tool: Tool | List[Tool]) -> None:
         tools = []
@@ -27,7 +29,7 @@ class ToolExecutor:
             
             self._tool_registry[t.name] = t
 
-        """ Call the event dispatchor when registering a tool. """
+        self._event_handler.invoke_sync(AgentEvents.ON_TOOL_LOAD, tool)
 
     def clear(self, tool: Optional[Tool | List[Tool]]=None):
         if tool is None:
@@ -35,7 +37,7 @@ class ToolExecutor:
             self._tool_registry.clear()
 
             if self._event_handler and removed:
-                """ Call the event dispatchor when removing a tool. """
+                self._event_handler.invoke_sync(AgentEvents.ON_TOOL_UNLOAD, tool)
             return
 
     def execute_sync(self, tool_calls: List[ToolCall] | None) -> List[Message]:
