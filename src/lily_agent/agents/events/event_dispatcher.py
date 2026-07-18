@@ -44,3 +44,22 @@ class EventDispatcher:
         ]
 
         await asyncio.gather(*tasks, return_exceptions=True)
+
+    def invoke_sync(self, name: str, *args, **kwargs):
+        if name not in self._events:
+            raise ValueError(f"Unknown event: {name}")
+
+        handlers = self._handlers.get(name, [])
+        results = []
+        for handler in handlers:
+            if inspect.iscoroutinefunction(handler):
+                raise TypeError(
+                    f"Handler {handler!r} for event {name!r} is async; "
+                    f"invoke_sync() only supports synchronous handlers"
+                )
+            try:
+                results.append(handler(*args, **kwargs))
+            except Exception as e:
+                results.append(e)
+
+        return results
