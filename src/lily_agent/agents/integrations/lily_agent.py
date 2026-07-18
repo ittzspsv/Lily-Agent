@@ -294,7 +294,7 @@ class LilyAgent(AgentBase):
             raise RuntimeError("Tool call was requested even though Agent has no tools defined.")
 
         await self._agent_event_handler.invoke(AgentEvents.ON_TOOL_CALL_REQUESTED)
-
+        
         if response.raw and response.raw.get("message"):
             conversation.add_message(
                 content=response.raw.get("message"), 
