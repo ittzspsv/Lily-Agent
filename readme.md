@@ -3,8 +3,6 @@
   <h1 style="margin: 0;">Lily Agent</h1>
 </div>
 
-
-
 A lightweight python framework for building modular LLM-powered AI agents.
 
 <p align="center">
@@ -12,7 +10,9 @@ A lightweight python framework for building modular LLM-powered AI agents.
 </p>
 
 ## Installation
+
 ### venv
+
 ```bash
 python -m venv .venv
 
@@ -26,30 +26,14 @@ pip install -e .
 ```
 
 ## Quick Start
-Get started by running your first AI agent. 
 
-**Synchronous version**
-```python
-from lily_agent import LilyAgent
-from lily_agent.adapters import OllamaAdapter
+Get started by running your first AI agent.
 
-# Create an agent
-agent = LilyAgent(
-    adapter=OllamaAdapter("qwen2.5:7b")
-)  
-
-# Run the agent
-while True:
-    print(agent.run_sync(input("Enter a prompt: ")))
-```
-
-**Asynchronous Version**
 ```python
 from lily_agent import LilyAgent
 from lily_agent.adapters import OllamaAdapter
 import asyncio
 
-# Create an agent
 agent = LilyAgent(
     adapter=OllamaAdapter("qwen2.5:7b")
 )
@@ -57,12 +41,12 @@ agent = LilyAgent(
 async def main():
     while True:
         response = await agent.run(input("Enter a prompt: "))
-
-        print(response)
+        print(response.content)
 
 asyncio.run(main())
 
 ```
+
 Defining a tool and making tool calls
 
 ```python
@@ -85,25 +69,33 @@ agent = LilyAgent(
 print(agent.run_sync("What do you know about me?"))
 ```
 
-
 ### Why Lily-Agent over other options
+
 - Minimal abstraction
 - Easier to learn, if you are new to developing Ai Agents (code based)
-- Both sync/async support 
+- Both sync/async support
 - Easy integration with local models (ollama)
 
-
-
 ### Documentation
+
 #### [Creating an Agent](/docs/agents/agents.md)
+
 - Learn how to build an custom agent
+
 #### [Defining Agent Tools](/docs/tools/tools.md)
+
 - Create custom tools for your agent to utilize.
+
 #### [Creating Custom Adapters](/docs/adapters/adapters.md)
+
 - Learn what are agent adapters and how they are powerful and flexible
+
 #### [Creating Custom Formatters](/docs/formatter/formatter.md)
+
 - Learn how to create custom tool schema formatters that various LLM expects
+
 #### [Agent Persistent Memory](/docs/vectorstore/vector_store.md)
+
 - Learn how to integrate a custom vector store for your agent.
 
 > **Note:** Package not yet released on PyPI. Stay tuned!
