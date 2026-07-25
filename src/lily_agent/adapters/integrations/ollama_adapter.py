@@ -111,7 +111,7 @@ class OllamaAdapter(AgentAdapter):
                 tool_arguments: dict = function.get("arguments", {})
                 tool_calls.append(ToolCall(id=tool_call_id, name=tool_name, input=tool_arguments))
 
-            return LLMResponse(response_type=ResponseType.ToolCall, content=content, tool_calls=tool_calls, raw=response)
+            return LLMResponse(type=ResponseType.ToolCall, content=content, tool_calls=tool_calls, raw=response)
         else:
-            return LLMResponse(response_type=ResponseType.Text, content=content, tool_calls=None, raw=response)
+            return LLMResponse(type=ResponseType.Text, content=content, tool_calls=None, raw=response)
         
