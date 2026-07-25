@@ -5,6 +5,7 @@ from ..schemas import Message, ToolCall, MessageRole
 from .events.event_dispatcher import EventDispatcher
 from .events.agent_events import AgentEvents
 from ..schemas.events import ToolResult
+from ..schemas import ToolCallResult
 
 from typing import List, Optional, TYPE_CHECKING
 if TYPE_CHECKING:
@@ -69,8 +70,14 @@ class ToolExecutor:
 
         return results 
     
-    async def execute(self, tool_calls: List[ToolCall] | None, **kwargs)-> List[Message]:
-        results: List[Message] = []
+    async def execute(
+            self, 
+            tool_calls: List[ToolCall] | None, 
+            **kwargs
+        )-> List[ToolCallResult]:
+        #results: List[Message] = []
+        #_tools: List[Tool] = []
+        _results: List[ToolCallResult] = []
 
         if tool_calls is None:
             raise ValueError("tool_calls cannot be None")
@@ -138,10 +145,20 @@ class ToolExecutor:
                         exception=e
                     ))
 
-            results.append(Message(
-                role=MessageRole.ToolResult,
-                content=str(result),
-                tool_call_id=tool_call.id
-            ))
+            
+            tool_result = ToolCallResult(
+                id=tool_call.id,
+                name=tool_call.name,
+                input=tool_call.input,
+                result=Message(
+                    role=MessageRole.ToolResult,
+                    content=str(result),
+                    tool_call_id=tool_call.id,
+                ),
+            )
 
-        return results 
+            tool_result._tool = tool
+
+            _results.append(tool_result)
+
+        return _results
