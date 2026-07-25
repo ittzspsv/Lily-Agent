@@ -6,7 +6,7 @@ from ...exceptions.agent import MaxIterationsError
 from ..tool_executor import ToolExecutor
 from ...memory.conversations import Conversation
 from ...memory.memory import MemoryBase
-from ...schemas import AgentPolicy
+from ...schemas import AgentPolicy, ToolCall
 from ..agent import AgentBase
 from ..events.agent_events import AgentEvents
 from ...registry.agent_registry import AgentRegistry
@@ -15,9 +15,9 @@ from ...registry.integrations.json_registry import JSONRegistry
 from ...schemas.events import (
     MemoryStore
 )
-from ...schemas import User, MessageRole, LLMResponse, AgentResponse
+from ...schemas import User, MessageRole, LLMResponse, AgentResponse, ToolCallResult, ResponseType
 
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Iterable
 from uuid import UUID
 import asyncio
 
@@ -267,11 +267,11 @@ class LilyAgent(AgentBase):
 
     async def _handle_tool_call_response(
         self,
-        response,
+        response: LLMResponse,
         conversation: Conversation,
         user: Optional[User],
         **kwargs
-    ) -> None:
+    ) -> List[ToolCallResult]:
         """
         ### Definition
         - Handles a "tool_call" response type from the adapter: executes the requested tools,
@@ -302,10 +302,11 @@ class LilyAgent(AgentBase):
                 role=MessageRole.Assistant
             )
 
-        tool_results = await self.tool_executor.execute(response.tool_calls, **kwargs)
-        conversation.add_tool_results(results=tool_results, user=user or self.user)
-
-        await self._store(text=str(tool_results), user=user)
+        tool_call_result: List[ToolCallResult] = await self.tool_executor.execute(response.tool_calls, **kwargs)
+        messages = [r.result for r in tool_call_result]
+        conversation.add_tool_results(results=messages, user=user or self.user)
+        await self._store(text=str(messages), user=user)
+        return tool_call_result
 
     def event(self, func=None):
         def decorator(fn):
@@ -359,7 +360,7 @@ class LilyAgent(AgentBase):
         ### Raises
         - **MaxIterationsError** => raises when the maximum number of iterations is reached without providing an concluding response
         """
-        
+        _tool_calls: List[ToolCallResult] = []
         conversation = self._conversation(query=query, user=user or self.user)
 
         if self._use_memory and self.memory is not None:
@@ -373,18 +374,25 @@ class LilyAgent(AgentBase):
                 formatted_tools
             )
 
-            if response.response_type == "text":
+            if response.type == ResponseType.Text:
                 result = await self._handle_text_response(response, conversation, query, user)
                 if result is not None:
-                    response = AgentResponse(**result.model_dump(), me=self.me)
+                    response = AgentResponse(
+                        **result.model_dump(), 
+                        agent=self.me,
+                        tool_call_result=_tool_calls
+                    )
                     await self._agent_event_handler.invoke(
                         AgentEvents.ON_AGENT_TEXT_RESPONSE,
                         response
                     )
                     return response
 
-            elif response.response_type == "tool_call":
-                await self._handle_tool_call_response(response, conversation, user, **kwargs)
+            elif response.type == ResponseType.ToolCall:
+                execution_result = await self._handle_tool_call_response(response, conversation, user, **kwargs)
+                _tool_calls.extend(
+                    execution_result
+                )
                 continue
 
         raise MaxIterationsError(self.max_iter)
