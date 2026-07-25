@@ -3,6 +3,7 @@ from typing import Any, Optional, List
 from enum import Enum
 from .users import User
 from .agents import AgentInfo
+from .tool_call import ToolCallResult
 
 from .tool_call import ToolCall
 
@@ -12,11 +13,11 @@ class ResponseType(str, Enum):
     Stop = "stop"
 
 class LLMResponse(BaseModel):
-    response_type: ResponseType
+    type: ResponseType
     content: Optional[str] = None
     raw: Any = None
     tool_calls: Optional[List[ToolCall]] = None
 
-
 class AgentResponse(LLMResponse):
-    me: Optional[AgentInfo] = None
+    agent: AgentInfo
+    tool_call_result: list[ToolCallResult] | None = None
