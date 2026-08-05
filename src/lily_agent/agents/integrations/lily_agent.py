@@ -93,7 +93,7 @@ class LilyAgent(AgentBase):
             prompt=self.me.prompt,
         )
 
-    def run_sync(self, query: str, user_id: Optional[str]=None, **kwargs):
+    def run_sync(self, query: str, user: Optional[User]=None, **kwargs):
         """
         ### Definition
         - Method used to run user query by interacting with the LLM and making tool-calls whenever necessary
