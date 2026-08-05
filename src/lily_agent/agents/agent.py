@@ -61,7 +61,7 @@ class AgentBase(ABC):
         )
 
 
-    def run_sync(self, query: str, user_id: Optional[str]=None, **kwargs) -> LLMResponse:
+    def run_sync(self, query: str, user: Optional[User]=None, **kwargs) -> LLMResponse:
         """
         ### Definition
         - Synchronous method used to run user query by interacting with the LLM
@@ -78,7 +78,7 @@ class AgentBase(ABC):
         try:
             asyncio.get_running_loop()
         except RuntimeError:
-            return asyncio.run(self.run(query=query, user_id=user_id))
+            return asyncio.run(self.run(query=query, user=user))
         else:
             raise RuntimeError(
                 "Cannot call run_sync() inside a running event loop. "
