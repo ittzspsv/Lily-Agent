@@ -7,6 +7,7 @@ from ...vectorstore.vector_store import VectorStore, VectorRetrieval
 from ...schemas.events import MemoryStore
 
 from ast import literal_eval
+from uuid import UUID
 
 class AgentMemory(MemoryBase):
     """
@@ -50,13 +51,13 @@ class AgentMemory(MemoryBase):
 
     async def push(
             self,
-            text: str,
-            agent_id: str,
-            user_id: Optional[str] = None,
+            text: str, 
+            agent_id: UUID,
+            user_id: Optional[UUID | int] = None,
             metadata: Optional[dict] = {}
         ) -> MemoryStore:
         response = await self.llm.run(text)
-        facts: List[str] = literal_eval(response)
+        facts: List[str] = literal_eval(response.content or "")
 
         for fact in facts:
             embedding = await self.embedder.embed(text)
@@ -70,7 +71,7 @@ class AgentMemory(MemoryBase):
             )
 
         return MemoryStore(
-            user_id=user_id or "__default__", 
+            user_id=user_id or UUID("53a82b92-fe63-4b51-9f70-0ed25a97edda"), 
             agent_id=agent_id,
             metadata=metadata or {},
             user_query=text,

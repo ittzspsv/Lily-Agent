@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
+from uuid import UUID
 
 @dataclass
 class VectorRetrieval:
@@ -25,7 +26,7 @@ class VectorStore(ABC):
     
     
     @abstractmethod
-    async def push(self, text, embedding, agent_id: str, user_id: Optional[str], metadata: Optional[dict]):
+    async def push(self, text, embedding, agent_id: UUID, user_id: Optional[UUID | int], metadata: Optional[dict]):
         ...
 
     @abstractmethod

@@ -1,5 +1,6 @@
 from typing import List, Any, Optional
 from pydantic import BaseModel, ConfigDict
+from uuid import UUID
 
 class ToolResult(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -12,8 +13,8 @@ class ToolResult(BaseModel):
 
 
 class MemoryStore(BaseModel):
-    user_id: str
-    agent_id: str
+    user_id: Optional[UUID | int]
+    agent_id: UUID
     metadata: dict
     user_query: str
     facts: List[str]
