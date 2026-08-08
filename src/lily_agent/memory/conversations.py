@@ -10,12 +10,12 @@ class Conversation:
 
     def _get_messages(self, user: User) -> List[Message]:
         if user.id not in self._messages:
-            self._messages[user.id] = [Message(role="system", content=self._system_prompt)]
+            self._messages[user.id] = [Message(role=MessageRole.System, content=self._system_prompt)]
         return self._messages[user.id]
 
     def add_message(self, user: User, content: str, role: MessageRole):
         self._get_messages(user).append(Message(
-            role = role.value,
+            role = role,
             content=content
         ))
 
@@ -30,7 +30,7 @@ class Conversation:
 
     def reset(self, user: User, system_prompt: Optional[str] = None) -> None:
         prompt = system_prompt or self._system_prompt
-        self._messages[user.id] = [Message(role="system", content=prompt)]
+        self._messages[user.id] = [Message(role=MessageRole.System, content=prompt)]
 
     def drop_user(self, user: User) -> None:
         self._messages.pop(user.id, None)
