@@ -1,12 +1,12 @@
 <div align="center" style="display: flex; align-items: center; justify-content: center; gap: 16px;">
-  <img src=".github/images/Chiaki.png" width="80" />
+  <img src=".github/images/Kyoko.png" width="80" />
   <h1 style="margin: 0;">Lily Agent</h1>
 </div>
 
 A lightweight python framework for building modular LLM-powered AI agents.
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.0-pink" />
+  <img src="https://img.shields.io/badge/version-1.0.2-pink" />
 </p>
 
 ## Installation
@@ -51,6 +51,7 @@ Defining a tool and making tool calls
 
 ```python
 from lily_agent import LilyAgent, tool
+import asyncio
 
 # Define a simple tool
 @tool(description="Retrieve basic user information such as name, preferences, or profile details.")
@@ -60,13 +61,18 @@ def user_details():
         "hobby" : ["coding", "reading books"]
     }
 
+async def main():
 # Create an agent
-agent = LilyAgent(
-    OllamaAdapter("qwen2.5:7b"),
-    tools=[user_details]
-)
+    agent = LilyAgent(
+        OllamaAdapter("qwen2.5:7b"),
+        tools=[user_details]
+    )
 
-print(agent.run_sync("What do you know about me?"))
+    response = await agent.run("What do you know about me?")
+
+    print(response.content)
+
+asyncio.run(main())
 ```
 
 ### Why Lily-Agent over other options
