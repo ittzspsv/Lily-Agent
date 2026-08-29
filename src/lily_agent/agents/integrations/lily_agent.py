@@ -1,5 +1,5 @@
 from ...adapters.adapter import AgentAdapter
-from ...tools.base.tool_base import Tool
+from ...tools import Tool
 from ...formatters.integrations.base_formatter import BaseFormatter
 from ...formatters.formatter import Formatter
 from ...exceptions.agent import MaxIterationsError

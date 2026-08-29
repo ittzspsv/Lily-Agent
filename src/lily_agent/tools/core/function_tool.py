@@ -1,10 +1,8 @@
-# function_tool.py
-
 import inspect
 from pydantic import BaseModel, create_model, ValidationError
 from typing import Optional, Type, Callable, Dict, Any, Tuple ,get_type_hints, cast
 from ..errors.tool_exceptions import ToolRuntimeError, ToolValidationError
-from ..base.tool_base import Tool
+from ..tool import Tool
 from functools import partial
 
 

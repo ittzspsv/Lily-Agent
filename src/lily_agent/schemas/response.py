@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 from typing import Any, Optional, List
 from enum import Enum
-from .users import User
 from .agents import AgentInfo
 from .tool_call import ToolCallResult
 

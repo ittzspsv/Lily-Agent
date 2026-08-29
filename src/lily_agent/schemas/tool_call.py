@@ -1,5 +1,5 @@
 from pydantic import BaseModel, PrivateAttr
-from ..tools.base.tool_base import Tool
+from ..tools import Tool
 from ..schemas.message import Message
 
 

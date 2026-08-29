@@ -1,4 +1,4 @@
-from ..tools.base.tool_base import Tool
+from ..tools import Tool
 from ..tools.errors.tool_exceptions import ToolValidationError, ToolRuntimeError
 from ..exceptions.agent import ToolNotFoundError
 from ..schemas import Message, ToolCall, MessageRole

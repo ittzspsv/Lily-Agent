@@ -1,5 +1,5 @@
 from ..formatter import Formatter
-from ...tools.base.tool_base import Tool
+from ...tools import Tool
 from typing import Dict, Any
 
 
