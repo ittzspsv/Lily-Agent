@@ -1,5 +1,5 @@
 from ..tools import Tool
-from ..tools.errors.tool_exceptions import ToolValidationError, ToolRuntimeError
+from ..exceptions.tool import ToolValidationError, ToolRuntimeError
 from ..exceptions.agent import ToolNotFoundError
 from ..schemas import Message, ToolCall, MessageRole
 from .events.event_dispatcher import EventDispatcher
