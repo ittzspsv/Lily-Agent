@@ -1,16 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
-from dataclasses import dataclass
+from ..schemas import VectorRetrieval
 from uuid import UUID
-
-@dataclass
-class VectorRetrieval:
-    id: str
-    text: str
-    embedding: Optional[List[float]]
-    user_id: str
-    agent_id: str
-    metadata: Optional[dict]
 
 class VectorStore(ABC):
     def __init__(self, dimensions: int) -> None:

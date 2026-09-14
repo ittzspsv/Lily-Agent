@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from typing import Any, List, Optional, TYPE_CHECKING, Dict
-from ..vector_store import VectorStore, VectorRetrieval
+from ..vector_store import VectorStore
+from ...schemas import VectorRetrieval
 
 if TYPE_CHECKING:
     import lancedb
@@ -137,7 +138,7 @@ class Lance(VectorStore):
                 embedding=row.get("embedding"),
                 user_id=row["user_id"],
                 agent_id=row["agent_id"],
-                metadata=row["metadata"]
+                metadata=json.loads(row["metadata"] or "{}")
             )
             for row in rows
         ]
