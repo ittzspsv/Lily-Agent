@@ -55,7 +55,6 @@ class Lance(VectorStore):
             raise ImportError("Install lancedb and pyarrow to use LanceMemory")
 
         
-        '''Let's define a schema for our vectorstore'''
         self._schema = pyarrow.schema([
             ('id', pyarrow.string()),
             ('text', pyarrow.string()),
@@ -88,12 +87,13 @@ class Lance(VectorStore):
                 schema=self._schema
             )
 
-    async def push(self, 
-                   text: str, 
-                   embedding: List[float], 
-                   agent_id: str, 
-                   user_id: Optional[str],
-                   metadata: Optional[dict]
+    async def push(
+            self, 
+            text: str, 
+            embedding, 
+            agent_id: uuid.UUID, 
+            user_id: Optional[uuid.UUID | int], 
+            metadata: Optional[dict]
         ) -> None:
         if self._table is not None:
             await self._table.add([

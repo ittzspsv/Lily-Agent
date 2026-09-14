@@ -26,7 +26,14 @@ class VectorStore(ABC):
     
     
     @abstractmethod
-    async def push(self, text, embedding, agent_id: UUID, user_id: Optional[UUID | int], metadata: Optional[dict]):
+    async def push(
+        self, 
+        text: str, 
+        embedding, 
+        agent_id: UUID, 
+        user_id: Optional[UUID | int], 
+        metadata: Optional[dict]
+    ):
         ...
 
     @abstractmethod
