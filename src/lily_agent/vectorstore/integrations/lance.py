@@ -26,19 +26,14 @@ class Lance(VectorStore):
         if not uri:
             raise ValueError("Database path isn't specified.")
         
-        '''Identifier (Can be local, or cloud endpoint url)'''
         self.uri = uri
-
         self.kwargs = kwargs
-
         self.dimensions = dimensions
-
         self.table_name = table_name
-        self._table: Optional["AsyncTable"] = None
 
+        self._table: Optional["AsyncTable"] = None
         self._db: Optional["AsyncConnection"] = None
         self._schema = None
-
         self._index_initialized: bool = False
 
     @classmethod
@@ -48,7 +43,6 @@ class Lance(VectorStore):
         return self
     
     async def _init(self):
-        """ Check if the package is installed, else raise an ImportError """
         try:
             import lancedb
             import pyarrow
@@ -67,21 +61,15 @@ class Lance(VectorStore):
         ])
 
 
-        """ Let's connect to lance db """
         self._db = await lancedb.connect_async(uri=self.uri, **self.kwargs)
 
-        """ Fetch all table names from the database """
         table_names = await self._db.table_names()
 
-        """
-        Check if the database contains the table name
-        If not raise an runtime exception.
-        """
+
         if self.table_name in table_names:
             self._table = await self._db.open_table(self.table_name)
 
         else:
-            """ Create a table with default parameter required for the agent. """
             self._table = await self._db.create_table(
                 self.table_name,
                 data=[],
