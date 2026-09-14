@@ -1,4 +1,5 @@
 from .integrations.lance import Lance
-from .vector_store import VectorStore, VectorRetrieval
+from .vector_store import VectorStore
+from .integrations.turso import Turso
 
-__all__ = ["Lance", "VectorStore", "VectorRetrieval"]
+__all__ = ["Lance", "VectorStore", "Turso"]
