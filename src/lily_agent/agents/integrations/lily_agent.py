@@ -22,8 +22,7 @@ from ...schemas import (
     ToolCallResult, 
     ResponseType,
     Message,
-    ToolCall,
-    AgentPolicy
+    ToolCall
 )
 
 from typing import Optional, List, Dict, Any
@@ -61,7 +60,6 @@ class LilyAgent(AgentBase):
         prompt: Optional[str] = None,
         key: Optional[str] = None,
         max_iter: int = 3,
-        policy: Optional[AgentPolicy] = None,
         registry: Optional[AgentRegistry] = None,
     ) -> None:
         super().__init__(adapter=adapter, role=role, prompt=prompt, name=name, key=key)
@@ -78,7 +76,6 @@ class LilyAgent(AgentBase):
         self.tools: List[Tool] = tools or []
         self.formatter: Formatter = formatter if formatter is not None else BaseFormatter()
         self.memory: Optional[MemoryBase] = memory
-        self.policy: Optional[AgentPolicy] = policy
         self.registry: AgentRegistry = registry or JSONRegistry()
 
         self.tool_executor: Optional[ToolExecutor] = (
@@ -92,8 +89,6 @@ class LilyAgent(AgentBase):
         self._use_memory: bool = self.memory is not None
         self._store_memory: bool = False
 
-        if self.policy is not None:
-            self._apply_policy()
 
         self.agent_id = self.registry.register(
             agent_key=self.me.key,
@@ -241,25 +236,6 @@ class LilyAgent(AgentBase):
                 continue
 
         raise MaxIterationsError(self.max_iter)
-
-
-    def _apply_policy(self) -> None:
-            if self.policy is None:
-                return
-    
-            if self.policy.use_memory is not None:
-                self._use_memory = self.policy.use_memory
-    
-            if self.policy.use_conversational_history is not None:
-                self._use_conversational_history = self.policy.use_conversational_history
-    
-            if self.policy.use_tools is False:
-                self.tools = []
-                self._tool_registry = {}
-                self.tool_executor = None
-    
-            if self.policy.store_memory is not None:
-                self._store_memory = self.policy.store_memory
 
     def _conversation(self, query: str, user: User) -> Conversation:
         """

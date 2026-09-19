@@ -14,9 +14,3 @@ class AgentInfo(BaseModel):
     @property
     def system_prompt(self) -> str:
         return f"{self.role}\n\n{self.prompt}"
-
-class AgentPolicy(BaseModel):
-    use_tools: Optional[bool] = None
-    use_conversational_history: Optional[bool] = None
-    use_memory: Optional[bool] = None
-    store_memory: Optional[bool] = None
