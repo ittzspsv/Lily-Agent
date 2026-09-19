@@ -30,11 +30,11 @@ pip install -e .
 Get started by running your first AI agent.
 
 ```python
-from lily_agent import LilyAgent
+from lily_agent import Agent
 from lily_agent.adapters import OllamaAdapter
 import asyncio
 
-agent = LilyAgent(
+agent = Agent(
     adapter=OllamaAdapter("qwen2.5:7b")
 )
 
@@ -50,7 +50,7 @@ asyncio.run(main())
 Defining a tool and making tool calls
 
 ```python
-from lily_agent import LilyAgent, tool
+from lily_agent import Agent, tool
 import asyncio
 
 # Define a simple tool
@@ -63,7 +63,7 @@ def user_details():
 
 async def main():
 # Create an agent
-    agent = LilyAgent(
+    agent = Agent(
         OllamaAdapter("qwen2.5:7b"),
         tools=[user_details]
     )
