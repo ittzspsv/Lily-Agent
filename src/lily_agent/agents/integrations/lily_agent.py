@@ -8,6 +8,9 @@ from ...memory.conversations import Conversation
 from ...memory.memory import MemoryBase
 from ..agent import AgentBase
 from ..events.agent_events import AgentEvents
+from ...memory import AgentMemory
+from .fact_retriever import FactRetriever
+from ...embedder import Embedder
 from ...registry.agent_registry import AgentRegistry
 from ...vectorstore.vector_store import VectorRetrieval
 from ...registry.integrations.json_registry import JSONRegistry
@@ -95,6 +98,35 @@ class LilyAgent(AgentBase):
             name=self.me.name,
             role=self.me.role,
             prompt=self.me.prompt,
+        )
+
+    @classmethod
+    async def with_memory(
+        cls,
+        adapter: AgentAdapter,
+        embedder: Embedder,
+        vector_store,
+        path: str,
+        memory_llm: Optional[Any] = None,
+        tools: Optional[List[Tool]] = None,
+        formatter: Optional[Formatter] = None,
+        name: Optional[str] = None,
+        role: Optional[str] = None,
+        prompt: Optional[str] = None,
+        key: Optional[str] = None,
+        max_iter: int = 3,
+        registry: Optional[AgentRegistry] = None,
+    ) -> "LilyAgent":
+        agent_memory = await AgentMemory.create(
+            embedder=embedder,
+            llm=memory_llm or FactRetriever(adapter=adapter),
+            vector_store=vector_store,
+            path=path,
+        )
+        return cls(
+            adapter=adapter, memory=agent_memory, tools=tools, formatter=formatter,
+            name=name, role=role, prompt=prompt, key=key,
+            max_iter=max_iter, registry=registry,
         )
 
     def run_sync(self, query: str, user: Optional[User]=None, **kwargs):
