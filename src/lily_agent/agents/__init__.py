@@ -1,4 +1,4 @@
-from .integrations.lily_agent import LilyAgent, AgentBase
+from .integrations.lily_agent import Agent, AgentBase
 from .integrations.fact_retriever import FactRetriever
 
-__all__ = ["LilyAgent", "FactRetriever", "AgentBase"]
+__all__ = ["Agent", "FactRetriever", "AgentBase"]

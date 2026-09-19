@@ -1,4 +1,4 @@
-from .agents import LilyAgent
+from .agents import Agent
 from .tools.decorator import tool
 
-__all__ = ["LilyAgent", "tool"]
+__all__ = ["Agent", "tool"]

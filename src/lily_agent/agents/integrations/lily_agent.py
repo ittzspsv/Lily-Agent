@@ -33,7 +33,7 @@ from uuid import UUID
 import asyncio
 
 
-class LilyAgent(AgentBase):
+class Agent(AgentBase):
     """
     ### Definition
     - Base class for all Agents that is responsible for handling prompts and
@@ -116,7 +116,7 @@ class LilyAgent(AgentBase):
         key: Optional[str] = None,
         max_iter: int = 3,
         registry: Optional[AgentRegistry] = None,
-    ) -> "LilyAgent":
+    ) -> "Agent":
         agent_memory = await AgentMemory.create(
             embedder=embedder,
             llm=memory_llm or FactRetriever(adapter=adapter),

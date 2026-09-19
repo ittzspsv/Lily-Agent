@@ -1,4 +1,4 @@
-from lily_agent import LilyAgent, tool
+from lily_agent import Agent, tool
 from lily_agent.adapters import OllamaAdapter
 from pydantic import BaseModel, Field
 import httpx
