@@ -1,4 +1,4 @@
-from .agents import AgentInfo, AgentPolicy
+from .agents import AgentInfo
 from .users import User
 from .tool_call import ToolCall, ToolCallResult
 from .message import Message, MessageRole
@@ -7,7 +7,6 @@ from .vector_store import VectorRetrieval
 from .events import MemoryStore, ToolResult
 
 __all__ = [
-    "AgentPolicy", 
     "AgentInfo", 
     "User", 
     "ToolCall", 
