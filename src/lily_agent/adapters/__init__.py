@@ -1,5 +1,5 @@
-from .integrations.ollama_adapter import OllamaAdapter
-from .integrations.groq_adapter import GroqAdapter
+from .integrations.ollama import OllamaAdapter
+from .integrations.groq import GroqAdapter
 from .adapter import AgentAdapter
 
 
