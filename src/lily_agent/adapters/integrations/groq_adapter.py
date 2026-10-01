@@ -1,134 +1,131 @@
-from typing import List, Dict, Any, Optional
+import json
+from typing import Any, Dict, List, Optional
+
 from ..adapter import AgentAdapter
 from lily_agent.schemas import Message, LLMResponse, ToolCall, ResponseType
 from lily_agent.exceptions.adapter import AdapterError
+from lily_agent.utils import stringify
 
-import json
 
 class GroqAdapter(AgentAdapter):
     def __init__(
-            self, model: str, 
-            base_endpoint: str | None = None,
-            path: str | None = None, 
-            api_key: str | None = None,  
-            timeout: float = 300.0,
-            **kwargs
-        ) -> None:
-
-        base_endpoint = base_endpoint or "https://api.groq.com/openai" # Base Endpoint.
-        path = path or "/v1/chat/completions"  # Chat completion route
-
-        super().__init__(model, base_endpoint, path ,api_key, timeout ,**kwargs)
+        self,
+        model: str,
+        base_endpoint: Optional[str] = None,
+        path: Optional[str] = None,
+        api_key: Optional[str] = None,
+        timeout: float = 300.0,
+        temperature: Optional[float] = None,
+        reasoning_effort: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(
+            model,
+            base_endpoint or "https://api.groq.com/openai",
+            path or "/v1/chat/completions",
+            api_key,
+            timeout,
+            **kwargs,
+        )
+        self.temperature = temperature
+        self.reasoning_effort = reasoning_effort
 
     def _build_request(self, messages: List[Message], tools: List[dict]) -> dict:
-        '''Start by creating a list of messages''' 
-        messages_list: List[dict] = []
+        mapped_messages: List[Dict[str, Any]] = []
 
-        '''Iterate through all the messages one by one'''
         for message in messages:
-            '''Get the content of the message'''
-            message_content = message.content
-            
+            role = getattr(message.role, "value", message.role)
+            content = message.content
 
-            '''If message content is actually a tool call result then let's convert it to json'''
-            if isinstance(message_content, (dict, list)):
-                message_content = json.dumps(message_content)
-
-
-            '''Let's create a new dictionary per message'''
-            messages_mapped: Dict[str, Any] = {
-                "content": message_content
-            } 
-
-            '''If the message contains a role which is a tool_result, then we set the map role => tool.  Else we set the default role that we got from the agent.'''
-            if message.role == "tool_result":
-                messages_mapped["role"] = "tool"
+            if role == "tool_result":
+                mapped: Dict[str, Any] = {"role": "tool", "content": stringify(content)}
                 if message.tool_call_id:
-                    messages_mapped["tool_call_id"] = message.tool_call_id
+                    mapped["tool_call_id"] = message.tool_call_id
+            elif role == "assistant" and isinstance(content, dict):
+                mapped = {"role": "assistant", "content": content.get("content") or ""}
+                if content.get("tool_calls"):
+                    mapped["tool_calls"] = content["tool_calls"]
             else:
-                messages_mapped["role"] = message.role
-                    
-            messages_list.append(messages_mapped)
+                mapped = {"role": role, "content": stringify(content)}
 
-        '''Let's finalise the payload and return it.'''
-        request = {
+            mapped_messages.append(mapped)
+
+        request: Dict[str, Any] = {
             "model": self.model,
-            "messages": messages_list
+            "messages": mapped_messages,
         }
 
-        if not self.think:
+        if self.reasoning_effort:
+            request["reasoning_effort"] = self.reasoning_effort
+        elif not self.think:
             request["reasoning_effort"] = "none"
 
-        '''If we have tools on our agent, lets add an key-value Pair'''
+        if self.temperature is not None:
+            request["temperature"] = self.temperature
+
         if tools:
             request["tools"] = tools
-            request["tool_choice"] = "auto" # Expected by the api.
-
-        '''Convert thinking to temperature.'''
-        if self.think:
-            request["temperature"] = 0.2
+            request["tool_choice"] = "auto"
 
         return request
-    
+
     def _parse_response(self, response: Any) -> LLMResponse:
+        if not isinstance(response, dict):
+            raise AdapterError(f"Unexpected Groq response type: {type(response).__name__}")
 
-        '''Getting the choices dictionary from the response'''
-        choices = response.get("choices", [])
+        if response.get("error"):
+            raise AdapterError(f"Groq returned an error: {response['error']}")
 
-        '''If there is no choices returned by the api then Let's raise an exception'''
+        choices = response.get("choices")
         if not choices:
             raise AdapterError("No choices returned from Groq response")
 
-        '''Let's extract the first message and it's contents from choices'''
-        message = choices[0].get("message", {})
-        content = message.get("content", None)
+        message = choices[0].get("message")
+        if not isinstance(message, dict):
+            raise AdapterError("Groq response choice has no message")
 
-        '''Define an empty list of tool_calls that the agent expects'''
-        tool_calls: List[ToolCall] = []
-
-        '''We will retrive the tool_calls that the LLM returned in the response'''
+        content = message.get("content")
+        raw = {**response, "message": message}
         raw_tool_calls = message.get("tool_calls")
 
-        if raw_tool_calls: # If there is a tool_call requested by the LLM
-            '''We iterate through the tool call to get expected parameters to build ToolCall'''
-            for tool_call in raw_tool_calls:
-                function: Optional[Dict] = tool_call.get("function")
-                if function is None:
-                    raise AdapterError("Tool call missing 'function'")
-
-                tool_call_id: str = tool_call.get("id") # ID Generated by the LLM
-                '''Getting the function name from the dictionary'''
-                tool_name: Optional[str] = function.get("name") 
-
-                if tool_name is None:
-                    raise AdapterError("Tool call missing 'name'")
-
-                '''Getting the arguments of the function extracted by the LLM'''
-                arguments = function.get("arguments", "{}")
-                tool_arguments = json.loads(arguments)
-
-                '''Append the request tool_call to the dict'''
-                tool_calls.append(
-                    ToolCall(
-                        id=tool_call_id,
-                        name=tool_name,
-                        input=tool_arguments
-                    )
-                )
-
-            '''We return an LLMResponse with the type=tool_call and all the parameters extracted'''
-
+        if not raw_tool_calls:
             return LLMResponse(
-                type=ResponseType.ToolCall,
+                type=ResponseType.Text,
                 content=content,
-                tool_calls=tool_calls,
-                raw=response
+                tool_calls=None,
+                raw=raw,
             )
 
-        '''Default Fallback finish_reason = stop'''    
+        tool_calls: List[ToolCall] = []
+
+        for tool_call in raw_tool_calls:
+            function = tool_call.get("function")
+            if not isinstance(function, dict):
+                raise AdapterError("Tool call missing 'function'")
+
+            name = function.get("name")
+            if not name:
+                raise AdapterError("Tool call missing 'name'")
+
+            call_id = tool_call.get("id")
+            if not call_id:
+                raise AdapterError("Tool call missing 'id'")
+
+            arguments = function.get("arguments") or "{}"
+            if isinstance(arguments, str):
+                try:
+                    arguments = json.loads(arguments)
+                except json.JSONDecodeError as error:
+                    raise AdapterError(f"Tool call arguments are not valid JSON: {error}") from error
+
+            if not isinstance(arguments, dict):
+                raise AdapterError("Tool call arguments must be a JSON object")
+
+            tool_calls.append(ToolCall(id=call_id, name=name, input=arguments))
+
         return LLMResponse(
-            type=ResponseType.Text,
+            type=ResponseType.ToolCall,
             content=content,
-            tool_calls=None,
-            raw=response
+            tool_calls=tool_calls,
+            raw=raw,
         )
