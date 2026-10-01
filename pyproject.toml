@@ -1,6 +1,6 @@
 [project]
 name = "lily-agent"
-version = "0.1.8"
+version = "1.0.2"
 description = "A lightweight python framework for building modular LLM-powered AI agents."
 authors = [{ name = "ShreeSPSV" }]
 readme = "readme.md"
