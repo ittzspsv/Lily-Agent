@@ -1,6 +1,6 @@
 from typing import Callable, Type, Optional
 from pydantic import BaseModel
-from .core.function_tool import FunctionTool
+from .function_tool import FunctionTool
 
 
 def tool(
