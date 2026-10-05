@@ -2,10 +2,9 @@ import json
 from typing import Any, Dict, List, Optional
 
 from ..adapter import AgentAdapter
-from lily_agent.schemas import Message, LLMResponse, ToolCall, ResponseType
-from lily_agent.exceptions.adapter import AdapterError
-from lily_agent.utils import stringify
-
+from ...schemas import Message, LLMResponse, ToolCall, ResponseType
+from ...exceptions.adapter import AdapterError
+from ...utils import stringify
 
 class GroqAdapter(AgentAdapter):
     def __init__(
