@@ -258,6 +258,12 @@ class Agent(AgentBase):
                         AgentEvents.ON_AGENT_TEXT_RESPONSE,
                         response
                     )
+
+                    await self._store(
+                        text=f"User [{user.name if user else "Default"}]: {query}\nAssistant: {response.content}",
+                        user=user
+                    )
+
                     return response
 
             elif response.type == ResponseType.ToolCall:
@@ -389,8 +395,6 @@ class Agent(AgentBase):
             user=user or self.user, 
             role=MessageRole.Assistant
         )
-
-        await self._store(text=query, user=user)
 
         return response
 
