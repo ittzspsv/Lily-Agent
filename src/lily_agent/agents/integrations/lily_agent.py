@@ -90,7 +90,6 @@ class Agent(AgentBase):
         self.max_iter: int = max_iter
         self._use_conversational_history: bool = True
         self._use_memory: bool = self.memory is not None
-        self._store_memory: bool = False
 
 
         self.agent_id = self.registry.register(
@@ -355,7 +354,7 @@ class Agent(AgentBase):
         ### Returns
         - None.
         """
-        if not (self._store_memory and self.memory is not None):
+        if self.memory is None:
             return
 
         memory_store: MemoryStore = await self.memory.push(
