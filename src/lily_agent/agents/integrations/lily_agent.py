@@ -260,7 +260,7 @@ class Agent(AgentBase):
                     )
 
                     await self._store(
-                        text=f"User [{user.name if user else "Default"}]: {query}\nAssistant: {response.content}",
+                        text=f"User [{user.name if user else 'Default'}]: {query}\nAssistant: {response.content}",
                         user=user
                     )
 
