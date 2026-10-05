@@ -436,5 +436,4 @@ class Agent(AgentBase):
         tool_call_result: List[ToolCallResult] = await self.execute_tools(response.tool_calls or [], **kwargs)
         messages = [r.result for r in tool_call_result]
         conversation.add_tool_results(results=messages, user=user or self.user)
-        await self._store(text=str(messages), user=user)
         return tool_call_result
