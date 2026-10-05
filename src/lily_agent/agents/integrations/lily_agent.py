@@ -234,14 +234,15 @@ class Agent(AgentBase):
         _tool_calls: List[ToolCallResult] = []
         conversation = self._conversation(query=query, user=user or self.user)
 
+        memory_context: Optional[str] = None
         if self._use_memory and self.memory is not None:
-            await self._inject(conversation, query, user)
+            memory_context = await self._retrieve_memory(query, user)
 
         formatted_tools = self.format_tools()
 
         for _ in range(self.max_iter):
             response: LLMResponse = await self.complete(
-                conversation.get_messages(user=user or self.user),
+                conversation.get_messages(user=user or self.user, context=memory_context),
                 formatted_tools
             )
 
@@ -298,32 +299,32 @@ class Agent(AgentBase):
         )
         return conversation
     
-    async def _inject(
-        self, 
-        conversation: Conversation,
+    async def _retrieve_memory(
+        self,
         query: str,
         user: Optional[User]
-    ) -> None:
+    ) -> Optional[str]:
         """
         ### Definition
-        - Retrieves relevant memory entries for the current query and injects them
-        into the conversation as system messages. Emits `ON_MEMORY_RETRIEVED` if any are found.
+        - Retrieves relevant memory entries for the current query and returns them as a
+        single context block. Emits `ON_MEMORY_RETRIEVED` if any are found.
+        - The result is ephemeral: it is passed to `Conversation.get_messages` for the
+        duration of this run and is never written to the stored conversation thread.
 
         ### Arguments
-        conversation: `Conversation` => The conversation to inject retrieved memory into.
         query: `str` => The user input used as the retrieval query.
         user: `Optional[User]` => The user scoping the memory filters, if any.
 
         ### Returns
-        - None. Mutates `conversation` in place.
+        - A formatted context `str`, or `None` if memory is disabled or nothing was found.
         """
+        if self.memory is None:
+            return None
+
         filters: Dict[str, UUID | int] = {"agent_id": self.me.id}
 
         if user is not None:
             filters["user_id"] = user.id
-
-        if self.memory is None:
-            return
 
         memory_retrieval: List[VectorRetrieval] = await self.memory.retrieve(
             query=query,
@@ -331,15 +332,13 @@ class Agent(AgentBase):
             k=5
         )
 
-        if len(memory_retrieval) > 0:
-            for retrieval in memory_retrieval:
-                conversation.add_message(
-                    content=f"[Memory] {retrieval.text}", 
-                    user=user or self.user, 
-                    role=MessageRole.System
-                )
+        if not memory_retrieval:
+            return None
 
-            await self._agent_event_handler.invoke(AgentEvents.ON_MEMORY_RETRIEVED, memory_retrieval)
+        await self._agent_event_handler.invoke(AgentEvents.ON_MEMORY_RETRIEVED, memory_retrieval)
+
+        lines = "\n".join(f"- {retrieval.text}" for retrieval in memory_retrieval)
+        return f"Relevant memory retrieved for this query (may be incomplete):\n{lines}"
 
     async def _store(self, text: str, user: Optional[User]) -> None:
         """

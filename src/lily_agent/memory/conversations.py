@@ -22,11 +22,26 @@ class Conversation:
     def add_tool_results(self, user: User, results: List[Message]) -> None:
         self._get_messages(user).extend(results)
 
-    def get_messages(self, user: User, k: int = 5) -> List[Message]:
+    def get_messages(
+        self,
+        user: User,
+        k: int = 5,
+        context: Optional[str] = None,
+    ) -> List[Message]:
         thread = self._get_messages(user)
-        system = thread[:1]
-        recent = thread[1:][-k:]
-        return system + recent
+        system, history = thread[0], thread[1:]
+
+        user_idx = [i for i, m in enumerate(history) if m.role == MessageRole.User]
+        k = max(k, 1)
+        start = user_idx[-k] if len(user_idx) > k else 0
+
+        if context:
+            system = Message(
+                role=MessageRole.System,
+                content=f"{system.content}\n\n{context}",
+            )
+
+        return [system] + history[start:]
 
     def reset(self, user: User, system_prompt: Optional[str] = None) -> None:
         prompt = system_prompt or self._system_prompt
