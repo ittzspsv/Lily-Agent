@@ -3,8 +3,9 @@ from typing import Any, Dict, List, Optional
 
 from ..adapter import AgentAdapter
 from ...schemas import Message, LLMResponse, ToolCall, ResponseType
+from ...exceptions.adapter import AdapterError, RateLimitError
 from ...exceptions.adapter import AdapterError
-from ...utils import stringify
+from ...utils import stringify, parse_duration
 
 class GroqAdapter(AgentAdapter):
     def __init__(
@@ -19,15 +20,26 @@ class GroqAdapter(AgentAdapter):
         **kwargs: Any,
     ) -> None:
         super().__init__(
-            model,
-            base_endpoint or "https://api.groq.com/openai",
-            path or "/v1/chat/completions",
-            api_key,
-            timeout,
+            model=model,
+            base_endpoint=base_endpoint or "https://api.groq.com/openai",
+            path=path or "/v1/chat/completions",
+            api_key=api_key,
+            timeout=timeout,
             **kwargs,
         )
         self.temperature = temperature
         self.reasoning_effort = reasoning_effort
+
+    def _parse_rate_limit(self, response):
+        error = super()._handle_rate_limit(response)
+        if isinstance(error, RateLimitError) and error.retry_after is None:
+            for kind in ("requests", "tokens"):
+                remaining = response.headers.get(f"x-ratelimit-remaining-{kind}")
+                reset = parse_duration(response.headers.get(f"x-ratelimit-reset-{kind}"))
+                if reset is not None and remaining is not None and float(remaining) <= 0:
+                    error.retry_after, error.limit_type = reset, kind
+                    break
+        return error
 
     def _build_request(self, messages: List[Message], tools: List[dict]) -> dict:
         mapped_messages: List[Dict[str, Any]] = []
