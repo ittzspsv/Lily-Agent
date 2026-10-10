@@ -45,7 +45,7 @@ class Tool(ABC):
 
         if "intent" in props:
             raise ValueError(
-                f"Tool '{self.name}' defines '{"intent"}', which is reserved for call descriptions"
+                f"Tool '{self.name}' defines 'intent', which is reserved for call descriptions"
             )
         
         schema["properties"] = {
