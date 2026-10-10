@@ -27,8 +27,8 @@ class AgentBase(ABC):
     def __init__(
             self,
             adapter: AgentAdapter,
-            name: Optional[str],
-            key: Optional[str],
+            name: Optional[str] = None,
+            key: Optional[str] = None,
             role: Optional[str] = None,
             prompt: Optional[str] = None,
     ) -> None:
@@ -59,7 +59,6 @@ class AgentBase(ABC):
                 "role": self.me.role
             }
         )
-
 
     def run_sync(self, query: str, user: Optional[User]=None, **kwargs) -> LLMResponse:
         """
