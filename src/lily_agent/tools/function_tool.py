@@ -23,6 +23,7 @@ class FunctionTool(Tool):
             name: Optional[str] ,
             description: Optional[str], 
             parameters: Optional[Type[BaseModel]],
+            describe_template: Optional[str] = None,
             overload: bool = False
         ) -> None:
         
@@ -49,6 +50,13 @@ class FunctionTool(Tool):
             self.parameters: Type[BaseModel] = parameters
 
         self.overload = overload
+
+        if "intent" in self.parameters.model_fields:
+            raise ToolRuntimeError(
+                self.name, "intent is reserved for call descriptions"
+            )
+
+        self.describe_template = describe_template
 
     def _model_builder(self, func: Callable) -> type[BaseModel]:
         signature: inspect.Signature = inspect.signature(func)

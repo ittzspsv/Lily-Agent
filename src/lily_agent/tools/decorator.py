@@ -7,6 +7,7 @@ def tool(
         name: Optional[str]=None, 
         description: Optional[str] = None, 
         parameters: Optional[Type[BaseModel]]=None,
+        describe_template: Optional[str] = None,
         overload: bool = False
     ):
     def decorator(func: Callable):
@@ -15,6 +16,7 @@ def tool(
             name=name,
             description=description, 
             parameters=parameters, 
+            describe_template=describe_template,
             overload=overload
         )
     return decorator
