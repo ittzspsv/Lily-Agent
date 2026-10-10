@@ -1,6 +1,6 @@
 from ..adapter import AgentAdapter
 from typing import List, Any, Dict, Optional
-from ...schemas import LLMResponse, Message, ToolCall, ResponseType
+from ...schemas import LLMResponse, Message, ToolCall, ResponseType, MessageRole
 from ...exceptions.adapter import AdapterError
 from ...utils import split_intent
 
@@ -39,24 +39,35 @@ class OllamaAdapter(AgentAdapter):
         messages_list: List[Dict[str, Any]] = []
 
         for message in messages:
-            role = getattr(message.role, "value", message.role)
+            role = message.role
             content = message.content
 
-            if content is None:
-                content = ""
-            elif isinstance(content, (dict, list)):
-                content = json.dumps(content)
-            elif not isinstance(content, str):
-                content = str(content)
+            if role == MessageRole.Assistant and isinstance(content, dict):
+                mapped = {
+                    "role": MessageRole.Assistant.value,
+                    "content": content.get("content") or "",
+                }
 
-            mapped: Dict[str, Any] = {"content": content}
+                if content.get("tool_calls"):
+                    mapped["tool_calls"] = content["tool_calls"]
 
-            if role == "tool_result":
-                mapped["role"] = "tool"
-                if message.tool_call_id:
-                    mapped["tool_call_id"] = message.tool_call_id
             else:
-                mapped["role"] = role
+                if content is None:
+                    content = ""
+                elif isinstance(content, (dict, list)):
+                    content = json.dumps(content)
+                elif not isinstance(content, str):
+                    content = str(content)
+
+                mapped = {"content": content}
+
+                if role == MessageRole.ToolResult:
+                    mapped["role"] = "tool"
+
+                    if message.tool_call_id:
+                        mapped["tool_call_id"] = message.tool_call_id
+                else:
+                    mapped["role"] = role
 
             messages_list.append(mapped)
 
@@ -70,6 +81,7 @@ class OllamaAdapter(AgentAdapter):
         if tools:
             payload["tools"] = tools
 
+        print(payload["messages"])
         return payload
 
     def _parse_response(self, response: Any) -> LLMResponse:
