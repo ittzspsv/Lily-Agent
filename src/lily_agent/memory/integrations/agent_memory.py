@@ -5,8 +5,8 @@ from ...agents.agent import AgentBase
 from ...embedder.embedder import Embedder
 from ...vectorstore.vector_store import VectorStore, VectorRetrieval
 from ...schemas.events import MemoryStore
+from ...utils import parse_json
 
-from ast import literal_eval
 from uuid import UUID
 
 class AgentMemory(MemoryBase):
@@ -57,7 +57,7 @@ class AgentMemory(MemoryBase):
             metadata: Optional[dict] = {}
         ) -> MemoryStore:
         response = await self.llm.run(text)
-        facts: List[str] = literal_eval(response.content or "")
+        facts: List[str] = parse_json(response.content)
 
         for fact in facts:
             embedding = await self.embedder.embed(fact)
