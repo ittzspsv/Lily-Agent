@@ -1,6 +1,7 @@
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, List
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
+from ast import literal_eval
 
 import json
 import re
@@ -41,3 +42,17 @@ def split_intent(arguments: dict) -> Tuple[Optional[str], dict]:
     if isinstance(intent, str) and intent.strip():
         return intent.strip(), args
     return None, args
+
+
+def parse_json(content: Optional[str]) -> List[str]:
+    if not content:
+        return []
+    text = re.sub(r"^```(?:\w+)?\s*|\s*```$", "", content.strip())
+    for parse in (json.loads, literal_eval):
+        try:
+            value = parse(text)
+        except (ValueError, SyntaxError):
+            continue
+        if isinstance(value, list):
+            return [f.strip() for f in value if isinstance(f, str) and f.strip()]
+    return []
