@@ -60,7 +60,7 @@ class AgentMemory(MemoryBase):
         facts: List[str] = literal_eval(response.content or "")
 
         for fact in facts:
-            embedding = await self.embedder.embed(text)
+            embedding = await self.embedder.embed(fact)
 
             await self.vector_store.push(
                 text=fact, 
