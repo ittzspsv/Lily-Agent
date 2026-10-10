@@ -81,7 +81,6 @@ class OllamaAdapter(AgentAdapter):
         if tools:
             payload["tools"] = tools
 
-        print(payload["messages"])
         return payload
 
     def _parse_response(self, response: Any) -> LLMResponse:
