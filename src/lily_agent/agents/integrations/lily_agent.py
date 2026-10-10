@@ -196,7 +196,20 @@ class Agent(AgentBase):
         tools: Optional[List[Dict[str, Any]]] = None,
     ) -> LLMResponse:
         formatted_tools = tools if tools is not None else self.format_tools()
-        return await self.adapter.complete(messages, formatted_tools)
+        response = await self.adapter.complete(messages, formatted_tools)
+        self._resolve_descriptions(response)
+        return response
+
+
+    def _resolve_descriptions(self, response: LLMResponse) -> None:
+        if not response.tool_calls:
+            return
+        by_name = {t.name: t for t in self.tools}
+        for call in response.tool_calls:
+            if call.description:
+                continue
+            tool = by_name.get(call.name)
+            call.description = tool.describe(call.input) if tool else f"Running {call.name}"
 
     async def execute_tools(
         self,
@@ -424,7 +437,9 @@ class Agent(AgentBase):
         if not self.tool_executor:
             raise RuntimeError("Tool call was requested even though Agent has no tools defined.")
 
-        await self._agent_event_handler.invoke(AgentEvents.ON_TOOL_CALL_REQUESTED)
+        await self._agent_event_handler.invoke(
+            AgentEvents.ON_TOOL_CALL_REQUESTED, response.tool_calls or []
+        )
 
         if response.raw and response.raw.get("message"):
             conversation.add_message(
