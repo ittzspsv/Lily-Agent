@@ -51,8 +51,8 @@ FACT_RETRIEVER_PROMPT: Final = """
             Output: ["User lives in Japan", "User works as a software engineer"]
         """
 
-INTENT_DESCRIPTION: Final = """
+INTENT_DESCRIPTION: Final = (
     "One short present-tense sentence telling the user what this call does, "
     "naming the concrete target, e.g. 'Opening config.yaml' or "
     "'Creating file shree_spsv'. Do not restate every argument."
-"""
+)
