@@ -2,6 +2,7 @@ from ..adapter import AgentAdapter
 from typing import List, Any, Dict, Optional
 from ...schemas import LLMResponse, Message, ToolCall, ResponseType
 from ...exceptions.adapter import AdapterError
+from ...utils import split_intent
 
 import json
 
@@ -122,7 +123,11 @@ class OllamaAdapter(AgentAdapter):
             if not isinstance(arguments, dict):
                 raise AdapterError("Tool call arguments must be a JSON object")
 
-            tool_calls.append(ToolCall(id=call_id, name=name, input=arguments))
+            intent, arguments = split_intent(arguments)
+
+            tool_calls.append(
+                ToolCall(id=call_id, name=name, input=arguments, description=intent)
+            )
 
         return LLMResponse(
             type=ResponseType.ToolCall,
