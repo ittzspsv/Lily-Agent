@@ -16,7 +16,14 @@ class OllamaAdapter(AgentAdapter):
         timeout: float = 300.0,
         **kwargs: Any,
     ) -> None:
-        super().__init__(model, base_endpoint, path, api_key, timeout, **kwargs)
+        super().__init__(
+            model=model, 
+            base_endpoint=base_endpoint, 
+            path=path, 
+            api_key=api_key, 
+            timeout=timeout, 
+            **kwargs
+        )
 
     def _build_request(self, messages: List[Message], tools: List[dict]) -> dict:
         """
