@@ -9,7 +9,7 @@ class BaseFormatter(Formatter):
         self.strict: bool = strict
 
     def format(self, tool: Tool) -> Dict[str, Any]:
-        schema = tool.input_schema.copy()
+        schema = tool.llm_input_schema
         if self.strict:
             schema.setdefault("additionalProperties", False)
 
