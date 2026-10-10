@@ -5,7 +5,7 @@ from ..adapter import AgentAdapter
 from ...schemas import Message, LLMResponse, ToolCall, ResponseType
 from ...exceptions.adapter import AdapterError, RateLimitError
 from ...exceptions.adapter import AdapterError
-from ...utils import stringify, parse_duration
+from ...utils import stringify, parse_duration, split_intent
 
 class GroqAdapter(AgentAdapter):
     def __init__(
@@ -132,7 +132,10 @@ class GroqAdapter(AgentAdapter):
             if not isinstance(arguments, dict):
                 raise AdapterError("Tool call arguments must be a JSON object")
 
-            tool_calls.append(ToolCall(id=call_id, name=name, input=arguments))
+            intent, arguments = split_intent(arguments)
+            tool_calls.append(
+                ToolCall(id=call_id, name=name, input=arguments, description=intent)
+            )
 
         return LLMResponse(
             type=ResponseType.ToolCall,
