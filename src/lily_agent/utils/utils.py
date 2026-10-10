@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
 
@@ -34,3 +34,10 @@ def parse_retry_after(value: Optional[str]) -> Optional[float]:
         return max(0.0, (when - datetime.now(timezone.utc)).total_seconds())
     except (TypeError, ValueError):
         return None
+
+def split_intent(arguments: dict) -> Tuple[Optional[str], dict]:
+    args = dict(arguments)
+    intent = args.pop("intent", None)
+    if isinstance(intent, str) and intent.strip():
+        return intent.strip(), args
+    return None, args
